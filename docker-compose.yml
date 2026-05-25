@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # 1. MySQL Relational Storage Core
+  db:
+    image: mysql:8.0
+    container_name: grit_mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: grit_archive
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_persistent_data:/var/lib/mysql
+      # Automatically initializes your 3NF tables on first container boot
+      - ./database/database.sql:/docker-entrypoint-initdb.d/database.sql
+    networks:
+      - grit_network
+
+  # 2. Django REST Framework Engine
+  backend:
+    build: ./backend
+    container_name: grit_django_api
+    restart: always
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_NAME: grit_archive
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_PORT: 3306
+    depends_on:
+      - db
+    networks:
+      - grit_network
+
+  # 3. React SPA Interface Channel
+  frontend:
+    build: ./frontend
+    container_name: grit_react_ui
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+    networks:
+      - grit_network
+
+volumes:
+  mysql_persistent_data:
+
+networks:
+  grit_network:
+    driver: bridge
