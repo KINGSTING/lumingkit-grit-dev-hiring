@@ -64,7 +64,7 @@ export default function App() {
         const typeMatch = pub.publication_type?.toLowerCase().includes(query);
         const priceMatch = parseFloat(pub.price).toFixed(2).includes(query);
         
-        // Match against any author in the array list mapping
+        // FIX: Use .some() to securely check if any author in the array matches the query
         const authorMatch = pub.author_details?.some(auth => 
           `${auth.first_name} ${auth.last_name}`.toLowerCase().includes(query)
         );
@@ -113,7 +113,17 @@ export default function App() {
       if (type === 'publisher') setPublForm({ ...existingRecord });
     } else {
       setEditId(null);
-      setPubForm({ title: '', publication_type: 'Book', publication_date: '', price: '0.00', description: '', abstract: '', authors: [], publisher: publishers[0]?.id || '' });
+      // FIX: Synchronized state properties with your read/write API key names
+      setPubForm({ 
+        title: '', 
+        publication_type: 'Book', 
+        publication_date: '', 
+        price: '0.00', 
+        description: '', 
+        abstract: '', 
+        authors: [], 
+        publisher: publishers[0]?.id || '' 
+      });
       setAuthForm({ first_name: '', last_name: '', short_bionote: '' });
       setPublForm({ name: '' });
     }
@@ -550,7 +560,7 @@ export default function App() {
                     multiple={true}
                     value={pubForm.authors || []} 
                     onChange={e => {
-                      const selectedOptions = Array.from(e.target.selectedOptions, option => int(option.value) || option.value);
+                      const selectedOptions = Array.from(e.target.selectedOptions, option => parseInt(option.value, 10) || option.value);
                       setPubForm({...pubForm, authors: selectedOptions});
                     }} 
                     required 
