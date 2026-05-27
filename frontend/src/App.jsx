@@ -9,8 +9,11 @@ export default function App() {
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Omni-Search Query State Context
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Modal State Controllers
-  const [modalType, setModalType] = useState(null); // 'publication', 'author', 'publisher' or null
+  const [modalType, setModalType] = useState(null); 
   const [editId, setEditId] = useState(null);
 
   // Form Binding States
@@ -39,6 +42,54 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  // ==============================================================
+  // SEARCH FILTER ALGORITHMS LAYER
+  // ==============================================================
+  const getFilteredData = () => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) {
+      if (activeTab === 'publications') return publications;
+      if (activeTab === 'authors') return authors;
+      if (activeTab === 'publishers') return publishers;
+    }
+
+    if (activeTab === 'publications') {
+      return publications.filter((pub) => {
+        const titleMatch = pub.title?.toLowerCase().includes(query);
+        const typeMatch = pub.publication_type?.toLowerCase().includes(query);
+        const priceMatch = parseFloat(pub.price).toFixed(2).includes(query);
+        
+        // Relational 3NF property lookups
+        const authorName = pub.author_details ? `${pub.author_details.first_name} ${pub.author_details.last_name}`.toLowerCase() : '';
+        const authorMatch = authorName.includes(query);
+        const publisherMatch = pub.publisher_details?.name?.toLowerCase().includes(query);
+
+        return titleMatch || typeMatch || priceMatch || authorMatch || publisherMatch;
+      });
+    }
+
+    if (activeTab === 'authors') {
+      return authors.filter((auth) => {
+        const nameMatch = `${auth.first_name} ${auth.last_name}`.toLowerCase().includes(query);
+        const idMatch = `#${auth.id}`.includes(query) || auth.id.toString() === query;
+        const bioMatch = auth.short_bionote?.toLowerCase().includes(query);
+        return nameMatch || idMatch || bioMatch;
+      });
+    }
+
+    if (activeTab === 'publishers') {
+      return publishers.filter((publ) => {
+        const nameMatch = publ.name?.toLowerCase().includes(query);
+        const idMatch = `#${publ.id}`.includes(query) || publ.id.toString() === query;
+        return nameMatch || idMatch;
+      });
+    }
+
+    return [];
+  };
+
+  const filteredItems = getFilteredData();
 
   const openModal = (type, existingRecord = null) => {
     setModalType(type);
@@ -88,16 +139,34 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       
-      {/* Dynamic Header Core */}
+      {/* Dynamic Header Core - (Slate-950 equivalent for core body matching) */}
       <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-black tracking-wider text-white shadow-lg shadow-indigo-500/20">G</div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">GRIT Hub Archive</h1>
-              <p className="text-xs font-medium text-slate-500">Decoupled Public Policy Repository Matrix</p>
+          <div className="flex items-center gap-4">
+            
+            {/* 1. Logo Asset Node - Enrolled with modern rounding and scaled to h-12 */}
+            <img 
+              src="src/assets/grit-logo.png" 
+              alt="GRIT Logo" 
+              className="h-12 w-12 object-contain select-none block rounded-2xl shadow-lg border border-slate-700"
+              onError={(e) => {
+                // Graceful fallback combo if the image asset path cannot be resolved
+                e.target.style.display = 'none';
+                document.getElementById('brand-icon-fallback')?.classList.remove('hidden');
+              }}
+            />
+
+            {/* Unified Branding and Description Column */}
+            <div className="flex flex-col">
+              {/* FIX: Explicitly forced standard sizing with !text-2xl or !text-3xl to safely override the global CSS rules */}
+              <h1 className="!text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                GRIT Hub Archive
+              </h1>
             </div>
+
           </div>
+
+          {/* CTA Control Matrix */}
           <div className="flex items-center gap-2">
             <button onClick={() => openModal('publication')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/10 active:scale-95 border border-indigo-500/20">+ Publication</button>
             <button onClick={() => openModal('author')} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 border border-slate-700/50">+ Author</button>
@@ -108,7 +177,7 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         
-        {/* Real-time System Metrics Analytics Block */}
+        {/* System Metrics Analytics Card Blocks */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
             <div>
@@ -133,19 +202,41 @@ export default function App() {
           </div>
         </section>
 
-        {/* Tab Selection Navigation Matrix */}
-        <div className="flex border-b border-slate-800 p-1 bg-slate-950 rounded-xl max-w-sm">
-          {['publications', 'authors', 'publishers'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 text-xs font-semibold rounded-lg capitalize transition-all ${
-                activeTab === tab ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        {/* CONTROLS BAR: Tab Switcher & Dynamic Search input */}
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800">
+          <div className="flex border border-slate-800 p-1 bg-slate-900 rounded-xl w-full sm:w-auto max-w-sm">
+            {['publications', 'authors', 'publishers'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setSearchQuery(''); }}
+                className={`flex-1 sm:flex-none px-5 py-2 text-xs font-semibold rounded-lg capitalize transition-all ${
+                  activeTab === tab ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* Integrated Omni-Search Bar Input Element */}
+          <div className="relative flex-1 sm:max-w-md">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 pointer-events-none text-sm">🔍</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`Search ${activeTab} by keyword, type, title, or metrics...`}
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-slate-300 transition text-sm"
+              >
+                &times;
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Core Table Viewport Layer */}
@@ -171,22 +262,38 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="text-sm divide-y divide-slate-900/50">
-                      {publications.map((pub) => (
+                      {filteredItems.map((pub) => (
                         <tr key={pub.id} className="hover:bg-slate-900/40 transition">
-                          <td className="p-4 font-semibold text-slate-200 max-w-xs truncate">{pub.title}</td>
+                          <td className="p-4 font-semibold text-slate-200 max-w-xs truncate" title={pub.title}>{pub.title}</td>
                           <td className="p-4 text-slate-400">
                             <span className="px-2 py-0.5 rounded-md text-xs bg-slate-800 border border-slate-700/60 font-medium">{pub.publication_type}</span>
                           </td>
                           <td className="p-4 text-slate-300">{pub.author_details ? `${pub.author_details.first_name} ${pub.author_details.last_name}` : 'N/A'}</td>
                           <td className="p-4 text-slate-400">{pub.publisher_details?.name || 'N/A'}</td>
-                          <td className="p-4 font-mono text-emerald-400 font-semibold">₱{parseFloat(pub.price).toFixed(2)}</td>
+                          <td className="p-4 font-mono font-semibold">
+                            {parseFloat(pub.price) === 0 ? (
+                              <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider animate-pulse">
+                                Free
+                              </span>
+                            ) : (
+                              <span className="text-emerald-400">
+                                ₱{parseFloat(pub.price).toFixed(2)}
+                              </span>
+                            )}
+                          </td>
                           <td className="p-4 text-right space-x-3 text-xs">
                             <button onClick={() => openModal('publication', pub)} className="text-indigo-400 hover:text-indigo-300 font-semibold transition">Edit</button>
                             <button onClick={() => handleDelete('publications', pub.id)} className="text-rose-400 hover:text-rose-300 font-semibold transition">Delete</button>
                           </td>
                         </tr>
                       ))}
-                      {publications.length === 0 && <tr><td colSpan="6" className="text-center py-12 text-xs text-slate-500 font-medium">No publications indexed. Click "+ Publication" to run data injection.</td></tr>}
+                      {filteredItems.length === 0 && (
+                        <tr>
+                          <td colSpan="6" className="text-center py-12 text-xs text-slate-500 font-medium">
+                            No matching publications found matching "{searchQuery}".
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -204,18 +311,24 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="text-sm divide-y divide-slate-900/50">
-                      {authors.map((auth) => (
+                      {filteredItems.map((auth) => (
                         <tr key={auth.id} className="hover:bg-slate-900/40 transition">
                           <td className="p-4 text-slate-500 font-mono text-xs">#{auth.id}</td>
                           <td className="p-4 font-semibold text-slate-200">{auth.last_name}, {auth.first_name}</td>
-                          <td className="p-4 text-slate-400 max-w-sm truncate">{auth.short_bionote || 'None annotated.'}</td>
+                          <td className="p-4 text-slate-400 max-w-sm truncate" title={auth.short_bionote}>{auth.short_bionote || 'None annotated.'}</td>
                           <td className="p-4 text-right space-x-3 text-xs">
                             <button onClick={() => openModal('author', auth)} className="text-indigo-400 hover:text-indigo-300 font-semibold transition">Edit</button>
                             <button onClick={() => handleDelete('authors', auth.id)} className="text-rose-400 hover:text-rose-300 font-semibold transition">Delete</button>
                           </td>
                         </tr>
                       ))}
-                      {authors.length === 0 && <tr><td colSpan="4" className="text-center py-12 text-xs text-slate-500 font-medium">No authors recorded in 3NF schema tables.</td></tr>}
+                      {filteredItems.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="text-center py-12 text-xs text-slate-500 font-medium">
+                            No matching authors found matching "{searchQuery}".
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -232,17 +345,23 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="text-sm divide-y divide-slate-900/50">
-                      {publishers.map((pub) => (
-                        <tr key={pub.id} className="hover:bg-slate-900/40 transition">
-                          <td className="p-4 text-slate-500 font-mono text-xs">#{pub.id}</td>
-                          <td className="p-4 font-semibold text-slate-200">{pub.name}</td>
+                      {filteredItems.map((publ) => (
+                        <tr key={publ.id} className="hover:bg-slate-900/40 transition">
+                          <td className="p-4 text-slate-500 font-mono text-xs">#{publ.id}</td>
+                          <td className="p-4 font-semibold text-slate-200">{publ.name}</td>
                           <td className="p-4 text-right space-x-3 text-xs">
-                            <button onClick={() => openModal('publisher', pub)} className="text-indigo-400 hover:text-indigo-300 font-semibold transition">Edit</button>
-                            <button onClick={() => handleDelete('publishers', pub.id)} className="text-rose-400 hover:text-rose-300 font-semibold transition">Delete</button>
+                            <button onClick={() => openModal('publisher', publ)} className="text-indigo-400 hover:text-indigo-300 font-semibold transition">Edit</button>
+                            <button onClick={() => handleDelete('publishers', publ.id)} className="text-rose-400 hover:text-rose-300 font-semibold transition">Delete</button>
                           </td>
                         </tr>
                       ))}
-                      {publishers.length === 0 && <tr><td colSpan="3" className="text-center py-12 text-xs text-slate-500 font-medium">No publishing entities registered.</td></tr>}
+                      {filteredItems.length === 0 && (
+                        <tr>
+                          <td colSpan="3" className="text-center py-12 text-xs text-slate-500 font-medium">
+                            No matching publishers found matching "{searchQuery}".
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
