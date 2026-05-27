@@ -24,8 +24,8 @@ export default function App() {
   const [authorInputValues, setAuthorInputValues] = useState(['']);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState(null);
 
-  // Form Binding States
-  const [pubForm, setPubForm] = useState({ title: '', publication_type: 'Book', publication_date: '', price: '0.00', description: '', abstract: '', authors: [], publisher: '' });
+  // Form Binding States - SGLG digital standardization parameters normalized
+  const [pubForm, setPubForm] = useState({ title: '', publication_type: 'Journal Article', publication_date: '', price: '0.00', description: '', abstract: '', authors: [], publisher: '' });
   const [authForm, setAuthForm] = useState({ first_name: '', last_name: '', short_bionote: '' });
   const [publForm, setPublForm] = useState({ name: '' });
 
@@ -119,7 +119,7 @@ export default function App() {
     } else {
       setEditId(null);
       setPubForm({ 
-        title: '', publication_type: 'Book', publication_date: '', price: '0.00', description: '', abstract: '', 
+        title: '', publication_type: 'Journal Article', publication_date: '', price: '0.00', description: '', abstract: '', 
         authors: [], publisher: publishers[0]?.id || '' 
       });
       setAuthorInputValues(['']);
@@ -200,6 +200,7 @@ export default function App() {
             </div>
           </div>
 
+          {/* Right Block: Actions Menu with Hint Indicator Matrix */}
           <div className="flex items-center gap-4">
             <div className={`flex items-center gap-2 transition-all duration-300 ease-out transform ${
               menuOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-12 opacity-0 pointer-events-none'
@@ -209,17 +210,27 @@ export default function App() {
               <button onClick={() => openModal('publisher')} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 border border-slate-700/50 whitespace-nowrap">+ Publisher</button>
             </div>
 
-            <button 
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="flex flex-col items-center justify-center w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-all duration-200 focus:outline-none relative group"
-              aria-label="Toggle Actions Menu"
-            >
-              <div className="w-5 h-4 flex flex-col justify-between transition-transform duration-300 ease-in-out">
-                <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 origin-left ${menuOpen ? 'rotate-45 translate-x-[3px] -translate-y-[1px]' : ''}`} />
-                <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 ${menuOpen ? 'opacity-0 scale-0' : 'opacity-100'}`} />
-                <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 origin-left ${menuOpen ? '-rotate-45 translate-x-[3px] translate-y-[1px]' : ''}`} />
-              </div>
-            </button>
+            <div className="relative flex items-center gap-3">
+              {!menuOpen && (
+                <span className="hidden md:inline-flex items-center text-[11px] font-bold tracking-wide text-indigo-400 animate-pulse bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-2.5 py-1">
+                  Click menu to reveal utilities <span className="ml-1.5">🚀</span>
+                </span>
+              )}
+              
+              <button 
+                onClick={() => setMenuOpen(!menuOpen)}
+                className={`flex flex-col items-center justify-center w-10 h-10 rounded-xl bg-slate-900 border text-slate-400 hover:text-white transition-all duration-200 focus:outline-none relative group ${
+                  menuOpen ? 'border-indigo-500 text-white shadow-lg shadow-indigo-500/10' : 'border-slate-800 hover:border-slate-700'
+                }`}
+                aria-label="Toggle Actions Menu"
+              >
+                <div className="w-5 h-4 flex flex-col justify-between transition-transform duration-300 ease-in-out">
+                  <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 origin-left ${menuOpen ? 'rotate-45 translate-x-[3px] -translate-y-[1px]' : ''}`} />
+                  <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 ${menuOpen ? 'opacity-0 scale-0' : 'opacity-100'}`} />
+                  <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 origin-left ${menuOpen ? '-rotate-45 translate-x-[3px] translate-y-[1px]' : ''}`} />
+                </div>
+              </button>
+            </div>
           </div>
 
         </div>
@@ -513,163 +524,182 @@ export default function App() {
       {/* Publication Form Overlay */}
       {modalType === 'publication' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 relative z-50">
-            <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+          {/* FIX 1: Max width scaled up to max-w-3xl for optimal grid presentation spacing */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 relative z-50 flex flex-col my-auto">
+            
+            <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40 shrink-0">
               <h3 className="font-bold text-white text-base">{editId ? 'Modify Archival Node' : 'Register New Publication'}</h3>
               <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-white text-lg transition">&times;</button>
             </div>
             
-            <form onSubmit={(e) => handleFormSubmit(e, 'publications', pubForm)} className="p-6 space-y-4">
-              <div>
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Document Title</label>
-                <input type="text" value={pubForm.title} onChange={e => setPubForm({...pubForm, title: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" placeholder="e.g. Seal of Good Local Governance Metrics Development" />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+            {/* FIX 2: Added structural max height bounding logic with internal scrolling configuration to fit 100% display screens safely */}
+            <form onSubmit={(e) => handleFormSubmit(e, 'publications', pubForm)} className="flex-1 flex flex-col min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(100vh-14rem)] custom-scrollbar">
                 <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Document Form</label>
-                  <select value={pubForm.publication_type} onChange={e => setPubForm({...pubForm, publication_type: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
-                    <option value="Book">Book</option>
-                    <option value="Journal Article">Journal Article</option>
-                    <option value="Research Paper">Research Paper</option>
-                    <option value="Report">Report</option>
-                  </select>
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publication Title</label>
+                  <input type="text" value={pubForm.title} onChange={e => setPubForm({...pubForm, title: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" placeholder="e.g. Seal of Good Local Governance Metrics Development" />
                 </div>
-                <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Release Timestamp</label>
-                  <input type="date" value={pubForm.publication_date} onChange={e => setPubForm({...pubForm, publication_date: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" />
-                </div>
-              </div>
-
-              {/* SEARCH DROPDOWN ENTRY ROWS MODULE */}
-              <div className="space-y-4 bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 relative">
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
-                  Document Authors Registry
-                </label>
                 
-                {authorInputValues.map((textValue, rowIndex) => {
-                  const matchingSuggestions = authors.filter(a => 
-                    `${a.first_name} ${a.last_name}`.toLowerCase().includes(textValue.toLowerCase())
-                  );
-                  const isDbMatchMissing = textValue.trim().length > 0 && !authors.some(a => 
-                    `${a.first_name} ${a.last_name}`.toLowerCase() === textValue.toLowerCase().trim()
-                  );
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Type</label>
+                    <select value={pubForm.publication_type} onChange={e => setPubForm({...pubForm, publication_type: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                      <option value="Book">Book</option>
+                      <option value="Journal Article">Journal Article</option>
+                      <option value="Research Paper">Research Paper</option>
+                      <option value="Report">Report</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publication Date</label>
+                    <input type="date" value={pubForm.publication_date} onChange={e => setPubForm({...pubForm, publication_date: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" />
+                  </div>
+                </div>
 
-                  return (
-                    <div key={rowIndex} className="space-y-1 relative">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
-                        {rowIndex === 0 ? "First Author / Lead Principal" : `Co-Author Row #${rowIndex}`}
-                      </span>
-                      
-                      <div className="flex items-center gap-2 relative">
-                        <div className="flex-1 relative">
-                          <input 
-                            type="text"
-                            value={textValue}
-                            required={rowIndex === 0}
-                            onFocus={() => setActiveDropdownIndex(rowIndex)}
-                            onChange={(e) => {
-                              const updatedTextValues = [...authorInputValues];
-                              updatedTextValues[rowIndex] = e.target.value;
-                              setAuthorInputValues(updatedTextValues);
+                {/* SEARCH DROPDOWN ENTRY ROWS MODULE */}
+                <div className="space-y-4 bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 relative">
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
+                    Author/s
+                  </label>
+                  
+                  {authorInputValues.map((textValue, rowIndex) => {
+                    const matchingSuggestions = authors.filter(a => 
+                      `${a.first_name} ${a.last_name}`.toLowerCase().includes(textValue.toLowerCase())
+                    );
+                    const isDbMatchMissing = textValue.trim().length > 0 && !authors.some(a => 
+                      `${a.first_name} ${a.last_name}`.toLowerCase() === textValue.toLowerCase().trim()
+                    );
 
-                              const updatedIds = [...(pubForm.authors || [])];
-                              updatedIds[rowIndex] = "";
-                              setPubForm({ ...pubForm, authors: updatedIds });
-                            }}
-                            placeholder="Click or type to search registered authors..."
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-                          />
+                    return (
+                      <div key={rowIndex} className="space-y-1 relative">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
+                          {rowIndex === 0 ? "First Author / Lead Principal" : `Co-Author Row #${rowIndex}`}
+                        </span>
+                        
+                        <div className="flex items-center gap-2 relative">
+                          <div className="flex-1 relative">
+                            <input 
+                              type="text"
+                              value={textValue}
+                              required={rowIndex === 0}
+                              onFocus={() => setActiveDropdownIndex(rowIndex)}
+                              onChange={(e) => {
+                                const updatedTextValues = [...authorInputValues];
+                                updatedTextValues[rowIndex] = e.target.value;
+                                setAuthorInputValues(updatedTextValues);
 
-                          {/* Floating Suggestion Overlays */}
-                          {activeDropdownIndex === rowIndex && (
-                            <div className="absolute top-full left-0 w-full bg-slate-950 border border-slate-800 mt-1 rounded-xl shadow-2xl overflow-hidden z-50 max-h-48 overflow-y-auto divide-y divide-slate-900/60">
-                              {matchingSuggestions.map(authorObj => (
-                                <div
-                                  key={authorObj.id}
-                                  onMouseDown={() => {
-                                    const updatedTextValues = [...authorInputValues];
-                                    updatedTextValues[rowIndex] = `${authorObj.first_name} ${authorObj.last_name}`;
-                                    setAuthorInputValues(updatedTextValues);
+                                const updatedIds = [...(pubForm.authors || [])];
+                                updatedIds[rowIndex] = "";
+                                setPubForm({ ...pubForm, authors: updatedIds });
+                              }}
+                              placeholder="Click or type to search registered authors..."
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                            />
 
-                                    const updatedIds = [...(pubForm.authors || [])];
-                                    updatedIds[rowIndex] = authorObj.id;
-                                    setPubForm({ ...pubForm, authors: updatedIds });
-                                    
-                                    setActiveDropdownIndex(null); 
-                                  }}
-                                  className="px-4 py-2 text-xs text-slate-300 hover:bg-indigo-600 hover:text-white cursor-pointer font-medium transition text-left"
-                                >
-                                  ✨ {authorObj.last_name}, {authorObj.first_name}
-                                </div>
-                              ))}
+                            {/* Floating Suggestion Overlays */}
+                            {activeDropdownIndex === rowIndex && (
+                              <div className="absolute top-full left-0 w-full bg-slate-950 border border-slate-800 mt-1 rounded-xl shadow-2xl overflow-hidden z-50 max-h-40 overflow-y-auto divide-y divide-slate-900/60">
+                                {matchingSuggestions.map(authorObj => (
+                                  <div
+                                    key={authorObj.id}
+                                    onMouseDown={() => {
+                                      const updatedTextValues = [...authorInputValues];
+                                      updatedTextValues[rowIndex] = `${authorObj.first_name} ${authorObj.last_name}`;
+                                      setAuthorInputValues(updatedTextValues);
 
-                              {isDbMatchMissing && (
-                                <div 
-                                  onMouseDown={() => handleTriggerRegistration(textValue)}
-                                  className="px-4 py-2.5 bg-indigo-950/40 text-indigo-400 hover:bg-indigo-600 hover:text-white cursor-pointer text-xs font-bold transition flex items-center justify-between gap-2"
-                                >
-                                  <span>⚠️ "{textValue}" is not registered.</span>
-                                  <span className="underline">Register &rarr;</span>
-                                </div>
-                              )}
-                              
-                              {matchingSuggestions.length === 0 && !isDbMatchMissing && (
-                                <div className="px-4 py-2 text-xs text-slate-500 italic text-left">No matching authors found.</div>
-                              )}
-                            </div>
+                                      const updatedIds = [...(pubForm.authors || [])];
+                                      updatedIds[rowIndex] = authorObj.id;
+                                      setPubForm({ ...pubForm, authors: updatedIds });
+                                      
+                                      setActiveDropdownIndex(null); 
+                                    }}
+                                    className="px-4 py-2 text-xs text-slate-300 hover:bg-indigo-600 hover:text-white cursor-pointer font-medium transition text-left"
+                                  >
+                                    ✨ {authorObj.last_name}, {authorObj.first_name}
+                                  </div>
+                                ))}
+
+                                {isDbMatchMissing && (
+                                  <div 
+                                    onMouseDown={() => handleTriggerRegistration(textValue)}
+                                    className="px-4 py-2.5 bg-indigo-950/40 text-indigo-400 hover:bg-indigo-600 hover:text-white cursor-pointer text-xs font-bold transition flex items-center justify-between gap-2"
+                                  >
+                                    <span>⚠️ "{textValue}" is not registered.</span>
+                                    <span className="underline">Register &rarr;</span>
+                                  </div>
+                                )}
+                                
+                                {matchingSuggestions.length === 0 && !isDbMatchMissing && (
+                                  <div className="px-4 py-2 text-xs text-slate-500 italic text-left">No matching authors found.</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {rowIndex > 0 && (
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const updatedTextValues = authorInputValues.filter((_, i) => i !== rowIndex);
+                                setAuthorInputValues(updatedTextValues);
+
+                                const updatedIds = (pubForm.authors || []).filter((_, i) => i !== rowIndex);
+                                setPubForm({ ...pubForm, authors: updatedIds });
+                                
+                                if (activeDropdownIndex === rowIndex) setActiveDropdownIndex(null);
+                              }}
+                              className="bg-slate-950 hover:bg-rose-950/40 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 h-10 w-10 rounded-xl flex items-center justify-center transition"
+                            >
+                              &times;
+                            </button>
                           )}
                         </div>
-
-                        {rowIndex > 0 && (
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              const updatedTextValues = authorInputValues.filter((_, i) => i !== rowIndex);
-                              setAuthorInputValues(updatedTextValues);
-
-                              const updatedIds = (pubForm.authors || []).filter((_, i) => i !== rowIndex);
-                              setPubForm({ ...pubForm, authors: updatedIds });
-                              
-                              if (activeDropdownIndex === rowIndex) setActiveDropdownIndex(null);
-                            }}
-                            className="bg-slate-950 hover:bg-rose-950/40 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 h-10 w-10 rounded-xl flex items-center justify-center transition"
-                          >
-                            &times;
-                          </button>
-                        )}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
 
-                {/* Small add co-author trigger row layout directly underneath */}
-                <div className="flex justify-start pt-1">
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setAuthorInputValues([...authorInputValues, '']);
-                      setPubForm({ ...pubForm, authors: [...(pubForm.authors || []), ''] });
-                      setActiveDropdownIndex(authorInputValues.length);
-                    }}
-                    className="py-1.5 px-3 rounded-lg border border-dashed border-slate-700 hover:border-indigo-500/50 bg-slate-900/30 hover:bg-indigo-950/20 text-slate-400 hover:text-indigo-400 text-[11px] font-semibold transition flex items-center gap-1 active:scale-95"
-                  >
-                    <span className="text-xs font-bold">+</span> Add Co-Author Row
-                  </button>
+                  <div className="flex justify-start pt-1">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setAuthorInputValues([...authorInputValues, '']);
+                        setPubForm({ ...pubForm, authors: [...(pubForm.authors || []), ''] });
+                        setActiveDropdownIndex(authorInputValues.length);
+                      }}
+                      className="py-1.5 px-3 rounded-lg border border-dashed border-slate-700 hover:border-indigo-500/50 bg-slate-900/30 hover:bg-indigo-950/20 text-slate-400 hover:text-indigo-400 text-[11px] font-semibold transition flex items-center gap-1 active:scale-95"
+                    >
+                      <span className="text-xs font-bold">+</span> Add Co-Author Row
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publisher</label>
-                  <select value={pubForm.publisher} onChange={e => setPubForm({...pubForm, publisher: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
-                    <option value="">-- Choose Relational Node --</option>
-                    {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publisher</label>
+                    <select value={pubForm.publisher} onChange={e => setPubForm({...pubForm, publisher: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                      <option value="">-- Choose Relational Node --</option>
+                      {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Price Target (PHP)</label>
+                    <input type="number" step="0.01" value={pubForm.price} onChange={e => setPubForm({...pubForm, price: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono transition" />
+                  </div>
                 </div>
+
+                {/* CLEAN UNIFIED ABSTRACT / DESCRIPTION METADATA ROW */}
                 <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Price Target (PHP)</label>
-                  <input type="number" step="0.01" value={pubForm.price} onChange={e => setPubForm({...pubForm, price: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono transition" />
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Abstract / Description</label>
+                  <textarea 
+                    value={pubForm.abstract || pubForm.description || ''} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      setPubForm({ ...pubForm, abstract: val, description: val });
+                    }} 
+                    rows="4" 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition resize-none" 
+                    placeholder="Enter abstract summary text or supplementary context description..."
+                  ></textarea>
                 </div>
               </div>
 
@@ -678,9 +708,9 @@ export default function App() {
                 <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setActiveDropdownIndex(null)} />
               )}
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800 relative z-20">
-                <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/10 transition">Confirm</button>
+              <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/40 flex justify-end gap-2 shrink-0 relative z-20">
+                <button type="button" onClick={() => setModalType(null)} className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/10 transition">Confirm</button>
               </div>
             </form>
           </div>
