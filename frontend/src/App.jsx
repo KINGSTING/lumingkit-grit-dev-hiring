@@ -17,8 +17,12 @@ export default function App() {
   const [editId, setEditId] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ADDED: Detailed Row-Click Modal View State Managers
+  // Detailed Row-Click Modal View State Managers
   const [selectedViewPub, setSelectedViewPub] = useState(null);
+  
+  // Custom Searchable Entry Array Trackers
+  const [authorInputValues, setAuthorInputValues] = useState(['']);
+  const [activeDropdownIndex, setActiveDropdownIndex] = useState(null);
 
   // Form Binding States
   const [pubForm, setPubForm] = useState({ title: '', publication_type: 'Book', publication_date: '', price: '0.00', description: '', abstract: '', authors: [], publisher: '' });
@@ -64,7 +68,6 @@ export default function App() {
         const typeMatch = pub.publication_type?.toLowerCase().includes(query);
         const priceMatch = parseFloat(pub.price).toFixed(2).includes(query);
         
-        // FIX: Use .some() to securely check if any author in the array matches the query
         const authorMatch = pub.author_details?.some(auth => 
           `${auth.first_name} ${auth.last_name}`.toLowerCase().includes(query)
         );
@@ -98,32 +101,28 @@ export default function App() {
 
   const openModal = (type, existingRecord = null) => {
     setModalType(type);
+    setActiveDropdownIndex(null);
     if (existingRecord) {
       setEditId(existingRecord.id);
       if (type === 'publication') {
-        // Map relationship model integer array lists for backend parsing compatibility
         const authorIds = existingRecord.author_details?.map(a => a.id) || [];
+        const textValues = existingRecord.author_details?.map(a => `${a.first_name} ${a.last_name}`) || [];
         setPubForm({ 
           ...existingRecord, 
           authors: authorIds,
           publisher: existingRecord.publisher_details?.id || existingRecord.publisher 
         });
+        setAuthorInputValues(textValues.length > 0 ? textValues : ['']);
       }
       if (type === 'author') setAuthForm({ ...existingRecord });
       if (type === 'publisher') setPublForm({ ...existingRecord });
     } else {
       setEditId(null);
-      // FIX: Synchronized state properties with your read/write API key names
       setPubForm({ 
-        title: '', 
-        publication_type: 'Book', 
-        publication_date: '', 
-        price: '0.00', 
-        description: '', 
-        abstract: '', 
-        authors: [], 
-        publisher: publishers[0]?.id || '' 
+        title: '', publication_type: 'Book', publication_date: '', price: '0.00', description: '', abstract: '', 
+        authors: [], publisher: publishers[0]?.id || '' 
       });
+      setAuthorInputValues(['']);
       setAuthForm({ first_name: '', last_name: '', short_bionote: '' });
       setPublForm({ name: '' });
     }
@@ -131,6 +130,14 @@ export default function App() {
 
   const handleFormSubmit = async (e, endpoint, payload) => {
     e.preventDefault();
+    
+    let cleanedPayload = { ...payload };
+    if (endpoint === 'publications' && cleanedPayload.authors) {
+      cleanedPayload.authors = cleanedPayload.authors
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id));
+    }
+
     const method = editId ? 'PUT' : 'POST';
     const url = editId ? `${API_BASE_URL}/${endpoint}/${editId}/` : `${API_BASE_URL}/${endpoint}/`;
 
@@ -138,7 +145,7 @@ export default function App() {
       const res = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(cleanedPayload)
       });
       if (res.ok) {
         setModalType(null);
@@ -159,6 +166,16 @@ export default function App() {
     }
   };
 
+  const handleTriggerRegistration = (typedText) => {
+    const names = typedText.trim().split(' ');
+    const firstName = names[0] || '';
+    const lastName = names.slice(1).join(' ') || '';
+    
+    setModalType('author');
+    setEditId(null);
+    setAuthForm({ first_name: firstName, last_name: lastName, short_bionote: 'Please register author.' });
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       
@@ -166,7 +183,6 @@ export default function App() {
       <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
-          {/* Left Block: Logo and Title Core */}
           <div className="flex items-center gap-4 min-w-0">
             <img 
               src="src/assets/grit-logo.png" 
@@ -184,7 +200,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Block: Animated Action Interface Wrapper Container */}
           <div className="flex items-center gap-4">
             <div className={`flex items-center gap-2 transition-all duration-300 ease-out transform ${
               menuOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-12 opacity-0 pointer-events-none'
@@ -303,7 +318,6 @@ export default function App() {
                             <span className="px-2 py-0.5 rounded-md text-xs bg-slate-800 border border-slate-700/60 font-medium">{pub.publication_type}</span>
                           </td>
                           
-                          {/* FIXED: High-fidelity 'et al.' conditional shortening matrix */}
                           <td className="p-4 text-slate-300 font-medium">
                             {pub.author_details && pub.author_details.length > 0 ? (
                               <span>
@@ -328,7 +342,6 @@ export default function App() {
                             )}
                           </td>
                           
-                          {/* CRITICAL: e.stopPropagation() prevents the overlay modal from popping open when clicking modification utilities */}
                           <td className="p-4 text-right space-x-3 text-xs" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => openModal('publication', pub)} className="text-indigo-400 hover:text-indigo-300 font-semibold transition">Edit</button>
                             <button onClick={() => handleDelete('publications', pub.id)} className="text-rose-400 hover:text-rose-300 font-semibold transition">Delete</button>
@@ -399,20 +412,15 @@ export default function App() {
         </div>
       </main>
 
-      {/* ============================================================== */}
-      {/* DIALOG CONTROL OVERLAYS MODULE                                 */}
-      {/* ============================================================== */}
-
-      {/* NEW: High-Fidelity Deep Dive Inspection Modal Overlay */}
+      {/* Deep Dive Summary Modal Overlay */}
       {selectedViewPub && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200">
             
-            {/* Modal Header Title Cap */}
             <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4">
               <div className="space-y-1">
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest font-mono">
-                  {selectedViewPub.publication_type} Node Summary
+                  {selectedViewPub.publication_type}
                 </span>
                 <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">
                   {selectedViewPub.title}
@@ -426,14 +434,11 @@ export default function App() {
               </button>
             </div>
 
-            {/* Core Metadata Display Body Panel */}
             <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              
-              {/* Row Grid 1: Relational Partners Context */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
                   <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Contributing Authors ({selectedViewPub.author_details?.length || 0})
+                    Authors ({selectedViewPub.author_details?.length || 0})
                   </span>
                   <div className="flex flex-col gap-1.5">
                     {selectedViewPub.author_details && selectedViewPub.author_details.length > 0 ? (
@@ -448,7 +453,7 @@ export default function App() {
                         </div>
                       ))
                     ) : (
-                      <span className="text-xs text-slate-500 italic">No historical profile bound.</span>
+                      <span className="text-xs text-slate-500 italic">No profiles bound.</span>
                     )}
                   </div>
                 </div>
@@ -456,69 +461,49 @@ export default function App() {
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col justify-between">
                   <div>
                     <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Publishing House Entity
+                      Publisher
                     </span>
                     <span className="text-sm font-semibold text-slate-200 block mt-1">
-                      🏢 {selectedViewPub.publisher_details?.name || 'Unassigned Network node'}
+                      🏢 {selectedViewPub.publisher_details?.name || 'Unassigned Node'}
                     </span>
                   </div>
                   <div className="pt-4 border-t border-slate-800/60 mt-4 grid grid-cols-2 gap-2">
                     <div>
-                      <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                        Release Date
-                      </span>
-                      <span className="text-xs font-mono text-slate-300 block mt-0.5">
-                        📆 {selectedViewPub.publication_date || 'N/A'}
-                      </span>
+                      <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Publication Date</span>
+                      <span className="text-xs font-mono text-slate-300 block mt-0.5">{selectedViewPub.publication_date || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                        Archival Index ID
-                      </span>
-                      <span className="text-xs font-mono text-slate-400 block mt-0.5">
-                        # {selectedViewPub.id}
-                      </span>
+                      <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Index ID</span>
+                      <span className="text-xs font-mono text-slate-400 block mt-0.5"># {selectedViewPub.id}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Row Grid 2: Descriptions / Policy Abstract Blocks */}
               <div className="space-y-4">
                 <div>
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Document Context / Abstract
-                  </span>
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Abstract / Description</span>
                   <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-800/60 text-sm text-slate-300 leading-relaxed max-w-none">
                     {selectedViewPub.abstract || selectedViewPub.description || (
-                      <span className="text-slate-500 italic text-xs">
-                        No supplementary annotation text mapped inside this archival schema node. Click Edit to append metadata descriptors.
-                      </span>
+                      <span className="text-slate-500 italic text-xs">No description mapped.</span>
                     )}
                   </div>
                 </div>
               </div>
-
             </div>
 
-            {/* Bottom Metrics Bar Panel Footer */}
             <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400">Financial Valuation Matrix:</span>
+                <span className="text-xs font-semibold text-slate-400">Price:</span>
                 <span className="font-mono text-base font-bold">
                   {parseFloat(selectedViewPub.price) === 0 ? (
-                    <span className="text-emerald-400 uppercase text-sm tracking-wider">Open Source (Free)</span>
+                    <span className="text-emerald-400 uppercase text-sm tracking-wider">Free</span>
                   ) : (
                     <span className="text-emerald-400">₱{parseFloat(selectedViewPub.price).toFixed(2)}</span>
                   )}
                 </span>
               </div>
-              <button 
-                onClick={() => setSelectedViewPub(null)} 
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md"
-              >
-                Close Viewport
-              </button>
+              <button onClick={() => setSelectedViewPub(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Viewport</button>
             </div>
 
           </div>
@@ -528,16 +513,18 @@ export default function App() {
       {/* Publication Form Overlay */}
       {modalType === 'publication' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 relative z-50">
             <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
               <h3 className="font-bold text-white text-base">{editId ? 'Modify Archival Node' : 'Register New Publication'}</h3>
               <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-white text-lg transition">&times;</button>
             </div>
+            
             <form onSubmit={(e) => handleFormSubmit(e, 'publications', pubForm)} className="p-6 space-y-4">
               <div>
                 <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Document Title</label>
                 <input type="text" value={pubForm.title} onChange={e => setPubForm({...pubForm, title: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" placeholder="e.g. Seal of Good Local Governance Metrics Development" />
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Document Form</label>
@@ -553,35 +540,145 @@ export default function App() {
                   <input type="date" value={pubForm.publication_date} onChange={e => setPubForm({...pubForm, publication_date: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" />
                 </div>
               </div>
+
+              {/* SEARCH DROPDOWN ENTRY ROWS MODULE */}
+              <div className="space-y-4 bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 relative">
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
+                  Document Authors Registry
+                </label>
+                
+                {authorInputValues.map((textValue, rowIndex) => {
+                  const matchingSuggestions = authors.filter(a => 
+                    `${a.first_name} ${a.last_name}`.toLowerCase().includes(textValue.toLowerCase())
+                  );
+                  const isDbMatchMissing = textValue.trim().length > 0 && !authors.some(a => 
+                    `${a.first_name} ${a.last_name}`.toLowerCase() === textValue.toLowerCase().trim()
+                  );
+
+                  return (
+                    <div key={rowIndex} className="space-y-1 relative">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
+                        {rowIndex === 0 ? "First Author / Lead Principal" : `Co-Author Row #${rowIndex}`}
+                      </span>
+                      
+                      <div className="flex items-center gap-2 relative">
+                        <div className="flex-1 relative">
+                          <input 
+                            type="text"
+                            value={textValue}
+                            required={rowIndex === 0}
+                            onFocus={() => setActiveDropdownIndex(rowIndex)}
+                            onChange={(e) => {
+                              const updatedTextValues = [...authorInputValues];
+                              updatedTextValues[rowIndex] = e.target.value;
+                              setAuthorInputValues(updatedTextValues);
+
+                              const updatedIds = [...(pubForm.authors || [])];
+                              updatedIds[rowIndex] = "";
+                              setPubForm({ ...pubForm, authors: updatedIds });
+                            }}
+                            placeholder="Click or type to search registered authors..."
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                          />
+
+                          {/* Floating Suggestion Overlays */}
+                          {activeDropdownIndex === rowIndex && (
+                            <div className="absolute top-full left-0 w-full bg-slate-950 border border-slate-800 mt-1 rounded-xl shadow-2xl overflow-hidden z-50 max-h-48 overflow-y-auto divide-y divide-slate-900/60">
+                              {matchingSuggestions.map(authorObj => (
+                                <div
+                                  key={authorObj.id}
+                                  onMouseDown={() => {
+                                    const updatedTextValues = [...authorInputValues];
+                                    updatedTextValues[rowIndex] = `${authorObj.first_name} ${authorObj.last_name}`;
+                                    setAuthorInputValues(updatedTextValues);
+
+                                    const updatedIds = [...(pubForm.authors || [])];
+                                    updatedIds[rowIndex] = authorObj.id;
+                                    setPubForm({ ...pubForm, authors: updatedIds });
+                                    
+                                    setActiveDropdownIndex(null); 
+                                  }}
+                                  className="px-4 py-2 text-xs text-slate-300 hover:bg-indigo-600 hover:text-white cursor-pointer font-medium transition text-left"
+                                >
+                                  ✨ {authorObj.last_name}, {authorObj.first_name}
+                                </div>
+                              ))}
+
+                              {isDbMatchMissing && (
+                                <div 
+                                  onMouseDown={() => handleTriggerRegistration(textValue)}
+                                  className="px-4 py-2.5 bg-indigo-950/40 text-indigo-400 hover:bg-indigo-600 hover:text-white cursor-pointer text-xs font-bold transition flex items-center justify-between gap-2"
+                                >
+                                  <span>⚠️ "{textValue}" is not registered.</span>
+                                  <span className="underline">Register &rarr;</span>
+                                </div>
+                              )}
+                              
+                              {matchingSuggestions.length === 0 && !isDbMatchMissing && (
+                                <div className="px-4 py-2 text-xs text-slate-500 italic text-left">No matching authors found.</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {rowIndex > 0 && (
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              const updatedTextValues = authorInputValues.filter((_, i) => i !== rowIndex);
+                              setAuthorInputValues(updatedTextValues);
+
+                              const updatedIds = (pubForm.authors || []).filter((_, i) => i !== rowIndex);
+                              setPubForm({ ...pubForm, authors: updatedIds });
+                              
+                              if (activeDropdownIndex === rowIndex) setActiveDropdownIndex(null);
+                            }}
+                            className="bg-slate-950 hover:bg-rose-950/40 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 h-10 w-10 rounded-xl flex items-center justify-center transition"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Small add co-author trigger row layout directly underneath */}
+                <div className="flex justify-start pt-1">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setAuthorInputValues([...authorInputValues, '']);
+                      setPubForm({ ...pubForm, authors: [...(pubForm.authors || []), ''] });
+                      setActiveDropdownIndex(authorInputValues.length);
+                    }}
+                    className="py-1.5 px-3 rounded-lg border border-dashed border-slate-700 hover:border-indigo-500/50 bg-slate-900/30 hover:bg-indigo-950/20 text-slate-400 hover:text-indigo-400 text-[11px] font-semibold transition flex items-center gap-1 active:scale-95"
+                  >
+                    <span className="text-xs font-bold">+</span> Add Co-Author Row
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Author Assignment (3NF - Hold Ctrl to select multiple)</label>
-                  <select 
-                    multiple={true}
-                    value={pubForm.authors || []} 
-                    onChange={e => {
-                      const selectedOptions = Array.from(e.target.selectedOptions, option => parseInt(option.value, 10) || option.value);
-                      setPubForm({...pubForm, authors: selectedOptions});
-                    }} 
-                    required 
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition min-h-[80px]"
-                  >
-                    {authors.map(a => <option key={a.id} value={a.id}>{a.last_name}, {a.first_name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publisher Assignment (3NF)</label>
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publisher</label>
                   <select value={pubForm.publisher} onChange={e => setPubForm({...pubForm, publisher: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
                     <option value="">-- Choose Relational Node --</option>
                     {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Price Target (PHP)</label>
+                  <input type="number" step="0.01" value={pubForm.price} onChange={e => setPubForm({...pubForm, price: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono transition" />
+                </div>
               </div>
-              <div>
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Price Target (PHP)</label>
-                <input type="number" step="0.01" value={pubForm.price} onChange={e => setPubForm({...pubForm, price: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono transition" />
-              </div>
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
+
+              {/* Shutter overlay to dismiss dropdown upon clicking away */}
+              {activeDropdownIndex !== null && (
+                <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setActiveDropdownIndex(null)} />
+              )}
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800 relative z-20">
                 <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/10 transition">Confirm</button>
               </div>

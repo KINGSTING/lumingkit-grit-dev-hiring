@@ -1,6 +1,6 @@
 -- ============================================================================
 -- GRIT Hub Archive - Relational Database Schema Initialization Blueprint
--- Architecture: 3rd Normal Form (3NF)
+-- Architecture: 3rd Normal Form (3NF) Many-to-Many
 -- Target Engine: MySQL 8.0+
 -- ============================================================================
 
@@ -31,7 +31,7 @@ CREATE TABLE `api_publisher` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ----------------------------------------------------------------------------
--- 3. Table Structure: Central Relational Publications Bridge Matrix
+-- 3. Table Structure: Central Relational Publications Matrix
 -- ----------------------------------------------------------------------------
 DROP TABLE IF EXISTS `api_publication`;
 CREATE TABLE `api_publication` (
@@ -42,13 +42,25 @@ CREATE TABLE `api_publication` (
   `price` DECIMAL(10,2) NOT NULL,
   `description` LONGTEXT NULL,
   `abstract` LONGTEXT NULL,
-  `author_id` INT NOT NULL,
   `publisher_id` INT NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `api_publication_author_id_idx` (`author_id`),
   KEY `api_publication_publisher_id_idx` (`publisher_id`),
-  CONSTRAINT `fk_publication_author` FOREIGN KEY (`author_id`) REFERENCES `api_author` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_publication_publisher` FOREIGN KEY (`publisher_id`) REFERENCES `api_publisher` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ----------------------------------------------------------------------------
+-- 3.5 Table Structure: Many-To-Many Junction Bridge (Publications <-> Authors)
+-- ----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `api_publication_authors`;
+CREATE TABLE `api_publication_authors` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `publication_id` INT NOT NULL,
+  `author_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `api_publication_authors_publication_id_author_id_uniq` (`publication_id`, `author_id`),
+  KEY `api_publication_authors_author_id_idx` (`author_id`),
+  CONSTRAINT `fk_junction_publication` FOREIGN KEY (`publication_id`) REFERENCES `api_publication` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_junction_author` FOREIGN KEY (`author_id`) REFERENCES `api_author` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ----------------------------------------------------------------------------
