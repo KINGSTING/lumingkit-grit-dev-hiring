@@ -15,6 +15,7 @@ export default function App() {
   // Modal State Controllers
   const [modalType, setModalType] = useState(null); 
   const [editId, setEditId] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Form Binding States
   const [pubForm, setPubForm] = useState({ title: '', publication_type: 'Book', publication_date: '', price: '0.00', description: '', abstract: '', author: '', publisher: '' });
@@ -139,39 +140,63 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       
-      {/* Dynamic Header Core - (Slate-950 equivalent for core body matching) */}
-      <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40">
+     {/* Dynamic Header Core - (Slate-950 equivalent for core body matching) */}
+      <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            
-            {/* 1. Logo Asset Node - Enrolled with modern rounding and scaled to h-12 */}
+          
+          {/* Left Block: Logo and Title Core */}
+          <div className="flex items-center gap-4 min-w-0">
             <img 
               src="src/assets/grit-logo.png" 
               alt="GRIT Logo" 
               className="h-12 w-12 object-contain select-none block rounded-2xl shadow-lg border border-slate-700"
               onError={(e) => {
-                // Graceful fallback combo if the image asset path cannot be resolved
                 e.target.style.display = 'none';
                 document.getElementById('brand-icon-fallback')?.classList.remove('hidden');
               }}
             />
-
-            {/* Unified Branding and Description Column */}
-            <div className="flex flex-col">
-              {/* FIX: Explicitly forced standard sizing with !text-2xl or !text-3xl to safely override the global CSS rules */}
-              <h1 className="!text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            <div className="flex flex-col truncate">
+              <h1 className="!text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent margin-0">
                 GRIT Hub Archive
               </h1>
             </div>
+          </div>
+
+          {/* Right Block: Animated Action Interface Wrapper Container */}
+          <div className="flex items-center gap-4">
+            
+            {/* CTA Control Matrix - Slides left/fades into view when menuOpen state is true */}
+            <div className={`flex items-center gap-2 transition-all duration-300 ease-out transform ${
+              menuOpen 
+                ? 'translate-x-0 opacity-100 pointer-events-auto' 
+                : 'translate-x-12 opacity-0 pointer-events-none'
+            }`}>
+              <button onClick={() => openModal('publication')} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 border border-slate-700/50 whitespace-nowrap">+ Publication</button>
+              <button onClick={() => openModal('author')} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 border border-slate-700/50 whitespace-nowrap">+ Author</button>
+              <button onClick={() => openModal('publisher')} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 border border-slate-700/50 whitespace-nowrap">+ Publisher</button>
+            </div>
+
+            {/* 3 Horizontal Line Hamburger Button - Transforms into an 'X' shape and spins when clicked */}
+            <button 
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex flex-col items-center justify-center w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-all duration-200 focus:outline-none relative group"
+              aria-label="Toggle Actions Menu"
+            >
+              <div className="w-5 h-4 flex flex-col justify-between transition-transform duration-300 ease-in-out">
+                <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 origin-left ${
+                  menuOpen ? 'rotate-45 translate-x-[3px] -translate-y-[1px]' : ''
+                }`} />
+                <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 ${
+                  menuOpen ? 'opacity-0 scale-0' : 'opacity-100'
+                }`} />
+                <span className={`w-5 h-0.5 bg-current rounded transition-all duration-300 origin-left ${
+                  menuOpen ? '-rotate-45 translate-x-[3px] translate-y-[1px]' : ''
+                }`} />
+              </div>
+            </button>
 
           </div>
 
-          {/* CTA Control Matrix */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => openModal('publication')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/10 active:scale-95 border border-indigo-500/20">+ Publication</button>
-            <button onClick={() => openModal('author')} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 border border-slate-700/50">+ Author</button>
-            <button onClick={() => openModal('publisher')} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-95 border border-slate-700/50">+ Publisher</button>
-          </div>
         </div>
       </header>
 
