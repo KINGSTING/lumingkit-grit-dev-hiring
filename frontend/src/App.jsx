@@ -8,6 +8,7 @@ export default function App() {
   const [authors, setAuthors] = useState([]);
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Omni-Search Query State Context
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,10 +27,10 @@ export default function App() {
   const [authorInputValues, setAuthorInputValues] = useState(['']);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState(null);
 
-  // Form Binding States - SGLG digital standardization parameters normalized
+  // Form Binding States - Cleaned publication configuration bindings
   const [pubForm, setPubForm] = useState({ title: '', publication_type: 'Journal Article', publication_date: '', price: '0.00', description: '', abstract: '', authors: [], publisher: '' });
-  const [authForm, setAuthForm] = useState({ first_name: '', last_name: '', short_bionote: '' });
-  const [publForm, setPublForm] = useState({ name: '' });
+  const [authForm, setAuthForm] = useState({ first_name: '', last_name: '', short_bionote: '', image_url: '' });
+  const [publForm, setPublForm] = useState({ name: '', image_url: '' });
 
   useEffect(() => {
     fetchAllData();
@@ -50,6 +51,39 @@ export default function App() {
       console.error("Error connecting to database engines:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Cloudinary Upload Pipeline explicitly constrained to Author & Publisher profiles
+  const handleImageUpload = async (e, targetType) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    setUploadingImage(true);
+    const uploadData = new FormData();
+    uploadData.append('file', selectedFile);
+    uploadData.append('target', targetType);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/upload/`, {
+        method: 'POST',
+        body: uploadData,
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (targetType === 'author') {
+          setAuthForm(prev => ({ ...prev, image_url: data.secure_url }));
+        } else if (targetType === 'publisher') {
+          setPublForm(prev => ({ ...prev, image_url: data.secure_url }));
+        }
+      } else {
+        console.error("Server asset handler rejected payload parameters.");
+      }
+    } catch (err) {
+      console.error("Cloudinary transport infrastructure connection failure:", err);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -112,21 +146,21 @@ export default function App() {
         setPubForm({ 
           ...existingRecord, 
           authors: authorIds,
-          publisher: existingRecord.publisher_details?.id || existingRecord.publisher 
+          publisher: existingRecord.publisher_details?.id || existingRecord.publisher
         });
         setAuthorInputValues(textValues.length > 0 ? textValues : ['']);
       }
-      if (type === 'author') setAuthForm({ ...existingRecord });
-      if (type === 'publisher') setPublForm({ ...existingRecord });
+      if (type === 'author') setAuthForm({ ...existingRecord, image_url: existingRecord.image_url || '' });
+      if (type === 'publisher') setPublForm({ ...existingRecord, image_url: existingRecord.image_url || '' });
     } else {
       setEditId(null);
       setPubForm({ 
         title: '', publication_type: 'Journal Article', publication_date: '', price: '0.00', description: '', abstract: '', 
-        authors: [], publisher: publishers[0]?.id || '' 
+        authors: [], publisher: publishers[0]?.id || ''
       });
       setAuthorInputValues(['']);
-      setAuthForm({ first_name: '', last_name: '', short_bionote: '' });
-      setPublForm({ name: '' });
+      setAuthForm({ first_name: '', last_name: '', short_bionote: '', image_url: '' });
+      setPublForm({ name: '', image_url: '' });
     }
   };
 
@@ -175,7 +209,7 @@ export default function App() {
     
     setModalType('author');
     setEditId(null);
-    setAuthForm({ first_name: firstName, last_name: lastName, short_bionote: 'Please register author.' });
+    setAuthForm({ first_name: firstName, last_name: lastName, short_bionote: 'Please register author.', image_url: '' });
   };
 
   return (
@@ -452,71 +486,93 @@ export default function App() {
          ============================================================== */}
 
       {/* 1. Deep Dive Summary Publication Modal Overlay */}
-      {selectedViewPub && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4">
-              <div className="space-y-1">
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest font-mono">{selectedViewPub.publication_type}</span>
-                <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">{selectedViewPub.title}</h3>
-              </div>
-              <button onClick={() => setSelectedViewPub(null)} className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition">&times;</button>
-            </div>
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Authors ({selectedViewPub.author_details?.length || 0})</span>
-                  <div className="flex flex-col gap-1.5">
-                    {selectedViewPub.author_details && selectedViewPub.author_details.length > 0 ? (
-                      selectedViewPub.author_details.map(auth => (
-                        <div key={auth.id} className="text-sm font-semibold text-slate-200">
-                          ✍️ {auth.first_name} {auth.last_name}
-                          {auth.short_bionote && <span className="block text-xs font-normal text-slate-400 pl-5 mt-0.5 italic">{auth.short_bionote}</span>}
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-500 italic">No profiles bound.</span>
-                    )}
+      {selectedViewPub && (() => {
+        const corporateInitials = (selectedViewPub.publisher_details?.name || 'P')
+          .split(' ')
+          .map(word => word[0])
+          .join('')
+          .substring(0, 3)
+          .toUpperCase();
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200">
+              
+              <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4">
+                <div className="flex items-center gap-4">
+                  {/* Pulls Cover image directly from parent publisher element arrays */}
+                  {selectedViewPub.publisher_details?.image_url ? (
+                    <img src={selectedViewPub.publisher_details.image_url} alt={selectedViewPub.title} className="h-16 w-24 rounded-xl object-cover shadow-lg border border-slate-700 shrink-0" />
+                  ) : (
+                    <div className="h-16 w-24 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-600 flex flex-col items-center justify-center text-sm font-black text-white shadow-lg border border-amber-400/20 shrink-0 select-none uppercase tracking-wider text-center px-1">
+                      <span className="text-[9px] opacity-60 font-bold block mb-0.5">COVER</span>
+                      {corporateInitials}
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest font-mono">{selectedViewPub.publication_type}</span>
+                    <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">{selectedViewPub.title}</h3>
                   </div>
                 </div>
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col justify-between">
+                <button onClick={() => setSelectedViewPub(null)} className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition">&times;</button>
+              </div>
+
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Authors ({selectedViewPub.author_details?.length || 0})</span>
+                    <div className="flex flex-col gap-1.5">
+                      {selectedViewPub.author_details && selectedViewPub.author_details.length > 0 ? (
+                        selectedViewPub.author_details.map(auth => (
+                          <div key={auth.id} className="text-sm font-semibold text-slate-200">
+                            ✍️ {auth.first_name} {auth.last_name}
+                            {auth.short_bionote && <span className="block text-xs font-normal text-slate-400 pl-5 mt-0.5 italic">{auth.short_bionote}</span>}
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">No profiles bound.</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col justify-between">
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Publisher</span>
+                      <span className="text-sm font-semibold text-slate-200 block mt-1">🏢 {selectedViewPub.publisher_details?.name || 'Unassigned Node'}</span>
+                    </div>
+                    <div className="pt-4 border-t border-slate-800/60 mt-4 grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Publication Date</span>
+                        <span className="text-xs font-mono text-slate-300 block mt-0.5">{selectedViewPub.publication_date || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Index ID</span>
+                        <span className="text-xs font-mono text-slate-400 block mt-0.5"># {selectedViewPub.id}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
                   <div>
-                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Publisher</span>
-                    <span className="text-sm font-semibold text-slate-200 block mt-1">🏢 {selectedViewPub.publisher_details?.name || 'Unassigned Node'}</span>
-                  </div>
-                  <div className="pt-4 border-t border-slate-800/60 mt-4 grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Publication Date</span>
-                      <span className="text-xs font-mono text-slate-300 block mt-0.5">{selectedViewPub.publication_date || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Index ID</span>
-                      <span className="text-xs font-mono text-slate-400 block mt-0.5"># {selectedViewPub.id}</span>
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Abstract / Description</span>
+                    <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-800/60 text-sm text-slate-300 leading-relaxed max-w-none">
+                      {selectedViewPub.abstract || selectedViewPub.description || <span className="text-slate-500 italic text-xs">No description mapped.</span>}
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <div>
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Abstract / Description</span>
-                  <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-800/60 text-sm text-slate-300 leading-relaxed max-w-none">
-                    {selectedViewPub.abstract || selectedViewPub.description || <span className="text-slate-500 italic text-xs">No description mapped.</span>}
-                  </div>
+              <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-400">Price:</span>
+                  <span className="font-mono text-base font-bold">
+                    {parseFloat(selectedViewPub.price) === 0 ? <span className="text-emerald-400 uppercase text-sm tracking-wider">Free</span> : <span className="text-emerald-400">₱{parseFloat(selectedViewPub.price).toFixed(2)}</span>}
+                  </span>
                 </div>
+                <button onClick={() => setSelectedViewPub(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Viewport</button>
               </div>
-            </div>
-            <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400">Price:</span>
-                <span className="font-mono text-base font-bold">
-                  {parseFloat(selectedViewPub.price) === 0 ? <span className="text-emerald-400 uppercase text-sm tracking-wider">Free</span> : <span className="text-emerald-400">₱{parseFloat(selectedViewPub.price).toFixed(2)}</span>}
-                </span>
-              </div>
-              <button onClick={() => setSelectedViewPub(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Viewport</button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 2. Deep Dive Author Profile Modal Overlay */}
       {selectedViewAuth && (() => {
@@ -530,9 +586,13 @@ export default function App() {
             <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
               <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4 shrink-0">
                 <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white shadow-md border border-indigo-400/20 shrink-0 select-none">
-                    {initials || "✍️"}
-                  </div>
+                  {selectedViewAuth.image_url ? (
+                    <img src={selectedViewAuth.image_url} alt={selectedViewAuth.last_name} className="h-16 w-16 rounded-2xl object-cover border border-slate-700 shadow-md" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white shadow-md border border-indigo-400/20 shrink-0 select-none">
+                      {initials || "✍️"}
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest font-mono">Scholar Profile</span>
                     <h3 className="font-bold text-white text-xl tracking-tight leading-snug mt-1">{selectedViewAuth.first_name} {selectedViewAuth.last_name}</h3>
@@ -601,62 +661,40 @@ export default function App() {
         return (
           <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-              
               <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4 shrink-0">
                 <div className="flex items-center gap-4">
-                  {/* Journal Cover / Publishing Cover Display Block Container */}
-                  <div className="h-16 w-24 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-600 flex flex-col items-center justify-center text-sm font-black text-white shadow-lg border border-amber-400/20 shrink-0 select-none tracking-wider uppercase px-2 text-center leading-tight">
-                    <span className="text-[10px] font-bold opacity-60 tracking-widest block mb-0.5">COVER</span>
-                    {corporateInitials}
-                  </div>
+                  {selectedViewPubl.image_url ? (
+                    <img src={selectedViewPubl.image_url} alt={selectedViewPubl.name} className="h-16 w-24 rounded-xl object-cover border border-slate-700 shadow-md" />
+                  ) : (
+                    <div className="h-16 w-24 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-600 flex flex-col items-center justify-center text-sm font-black text-white shadow-lg border border-amber-400/20 shrink-0 select-none tracking-wider uppercase px-2 text-center leading-tight">
+                      <span className="text-[10px] font-bold opacity-60 tracking-widest block mb-0.5">COVER</span>
+                      {corporateInitials}
+                    </div>
+                  )}
                   <div className="space-y-1">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest font-mono">
-                      Publishing House Node
-                    </span>
-                    <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">
-                      {selectedViewPubl.name}
-                    </h3>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest font-mono">Publishing House Node</span>
+                    <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">{selectedViewPubl.name}</h3>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setSelectedViewPubl(null)} 
-                  className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition"
-                >
-                  &times;
-                </button>
+                <button onClick={() => setSelectedViewPubl(null)} className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition">&times;</button>
               </div>
-
               <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2 p-4 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-3">
                     <div>
                       <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Corporate Description</span>
-                      <p className="text-sm text-slate-300 leading-relaxed">
-                        Official digital registry and publishing management node for <span className="text-amber-400 font-semibold">{selectedViewPubl.name}</span>. Tracks peer-reviewed distributions, public sandbox policies, and institutional assets.
-                      </p>
+                      <p className="text-sm text-slate-300 leading-relaxed">Official digital registry and publishing management node for <span className="text-amber-400 font-semibold">{selectedViewPubl.name}</span>. Tracks peer-reviewed distributions, public sandbox policies, and institutional assets.</p>
                     </div>
                     <div>
                       <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Resource Hyperlink Link</span>
-                      <a 
-                        href="https://ncpag.upd.edu.ph" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-xs text-indigo-400 hover:text-indigo-300 underline font-mono break-all inline-block mt-0.5"
-                      >
-                        https://ncpag.upd.edu.ph/registry/nodes/{selectedViewPubl.id}
-                      </a>
+                      <a href="https://ncpag.upd.edu.ph" target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300 underline font-mono break-all inline-block mt-0.5">https://ncpag.upd.edu.ph/registry/nodes/{selectedViewPubl.id}</a>
                     </div>
                   </div>
-                  
                   <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col justify-center items-center text-center">
                     <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Tracked Releases</span>
-                    <div className="text-3xl font-extrabold text-amber-400 font-mono bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-2xl w-full">
-                      {publisherPubs.length}
-                    </div>
+                    <div className="text-3xl font-extrabold text-amber-400 font-mono bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-2xl w-full">{publisherPubs.length}</div>
                   </div>
                 </div>
-
-                {/* Publications Sub-Table Container Matrix */}
                 <div className="space-y-3">
                   <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Publish Title Releases</span>
                   <div className="rounded-xl border border-slate-800/80 bg-slate-950/20 overflow-hidden divide-y divide-slate-800/40">
@@ -671,32 +709,22 @@ export default function App() {
                           className="p-3 hover:bg-slate-900/60 transition cursor-pointer flex items-center justify-between gap-4 group"
                         >
                           <div className="min-w-0">
-                            <span className="text-sm font-semibold text-slate-200 group-hover:text-amber-400 transition-colors block truncate">
-                              📄 {pub.title}
-                            </span>
-                            <span className="text-[11px] text-slate-500 block mt-0.5">
-                              Release Date: {pub.publication_date || 'N/A'} &bull; Base Price: ₱{parseFloat(pub.price).toFixed(2)}
-                            </span>
+                            <span className="text-sm font-semibold text-slate-200 group-hover:text-amber-400 transition-colors block truncate">📄 {pub.title}</span>
+                            <span className="text-[11px] text-slate-500 block mt-0.5">Release Date: {pub.publication_date || 'N/A'} &bull; Base Price: ₱{parseFloat(pub.price).toFixed(2)}</span>
                           </div>
-                          <span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-800 border border-slate-700/60 font-medium text-slate-400 whitespace-nowrap shrink-0">
-                            {pub.publication_type}
-                          </span>
+                          <span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-800 border border-slate-700/60 font-medium text-slate-400 whitespace-nowrap shrink-0">{pub.publication_type}</span>
                         </div>
                       ))
                     ) : (
-                      <div className="p-4 text-center text-xs text-slate-500 italic font-medium">
-                        No active manuscript titles registered under this publishing corporation.
-                      </div>
+                      <div className="p-4 text-center text-xs text-slate-500 italic font-medium">No active manuscript titles registered under this publishing corporation.</div>
                     )}
                   </div>
                 </div>
               </div>
-
               <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
                 <span className="text-xs font-mono text-slate-500">System Entity ID: #{selectedViewPubl.id}</span>
                 <button onClick={() => setSelectedViewPubl(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Viewport</button>
               </div>
-
             </div>
           </div>
         );
@@ -710,12 +738,14 @@ export default function App() {
               <h3 className="font-bold text-white text-base">{editId ? 'Modify Archival Node' : 'Register New Publication'}</h3>
               <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-white text-lg transition">&times;</button>
             </div>
+            
             <form onSubmit={(e) => handleFormSubmit(e, 'publications', pubForm)} className="flex-1 flex flex-col min-h-0">
               <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(100vh-14rem)] custom-scrollbar">
                 <div>
                   <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publication Title</label>
                   <input type="text" value={pubForm.title} onChange={e => setPubForm({...pubForm, title: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" placeholder="e.g. Seal of Good Local Governance Metrics Development" />
                 </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Type</label>
@@ -821,7 +851,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Shutter overlay to dismiss dropdown upon clicking away */}
               {activeDropdownIndex !== null && <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setActiveDropdownIndex(null)} />}
 
               <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/40 flex justify-end gap-2 shrink-0 relative z-20">
@@ -852,13 +881,26 @@ export default function App() {
                   <input type="text" value={authForm.last_name} onChange={e => setAuthForm({...authForm, last_name: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" />
                 </div>
               </div>
+              
+              {/* Cloudinary Integration Layer: Author Profile Photo Upload Block */}
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Profile Avatar / Picture</label>
+                <div className="flex items-center gap-3 bg-slate-950 p-2 rounded-xl border border-slate-800 relative overflow-hidden h-[42px]">
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'author')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                  <div className="text-xs font-semibold text-slate-300 truncate w-full flex items-center justify-between px-2">
+                    <span>{authForm.image_url ? '✓ Photo Linked' : '📁 Upload Portrait...'}</span>
+                    {uploadingImage && <span className="text-[10px] text-indigo-400 animate-pulse font-mono font-bold">Syncing...</span>}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Short Bio Annotation</label>
                 <textarea value={authForm.short_bionote || ''} onChange={e => setAuthForm({...authForm, short_bionote: e.target.value})} rows="3" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" placeholder="Primary research fields, institutional affiliations, etc..."></textarea>
               </div>
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
                 <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/10 transition">Confirm</button>
+                <button type="submit" disabled={uploadingImage} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/10 transition disabled:opacity-40">Confirm</button>
               </div>
             </form>
           </div>
@@ -878,9 +920,22 @@ export default function App() {
                 <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Corporate / Agency Legal Name</label>
                 <input type="text" value={publForm.name} onChange={e => setPublForm({...publForm, name: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" placeholder="e.g. National College of Public Administration and Governance" />
               </div>
+
+              {/* Cloudinary Integration Layer: Publisher / Journal Cover Upload Block */}
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Journal / Press Cover Page</label>
+                <div className="flex items-center gap-3 bg-slate-950 p-2 rounded-xl border border-slate-800 relative overflow-hidden h-[42px]">
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'publisher')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                  <div className="text-xs font-semibold text-slate-300 truncate w-full flex items-center justify-between px-2">
+                    <span>{publForm.image_url ? '✓ Cover Attached' : '📁 Upload Branding Graphics...'}</span>
+                    {uploadingImage && <span className="text-[10px] text-amber-400 animate-pulse font-mono font-bold">Syncing...</span>}
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
                 <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/10 transition">Confirm</button>
+                <button type="submit" disabled={uploadingImage} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/10 transition disabled:opacity-40">Confirm</button>
               </div>
             </form>
           </div>
