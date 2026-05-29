@@ -20,6 +20,7 @@ export default function App() {
   // Detailed Row-Click Modal View State Managers
   const [selectedViewPub, setSelectedViewPub] = useState(null);
   const [selectedViewAuth, setSelectedViewAuth] = useState(null);
+  const [selectedViewPubl, setSelectedViewPubl] = useState(null);
   
   // Custom Searchable Entry Array Trackers
   const [authorInputValues, setAuthorInputValues] = useState(['']);
@@ -411,10 +412,14 @@ export default function App() {
                     </thead>
                     <tbody className="text-sm divide-y divide-slate-900/50">
                       {filteredItems.map((publ) => (
-                        <tr key={publ.id} className="hover:bg-slate-900/40 transition">
-                          <td className="p-4 text-slate-500 font-mono text-xs">#{publ.id}</td>
-                          <td className="p-4 font-semibold text-slate-200">{publ.name}</td>
-                          <td className="p-4 text-right space-x-3 text-xs">
+                        <tr 
+                          key={publ.id}
+                          onClick={() => setSelectedViewPubl(publ)}
+                          className="hover:bg-slate-900/60 transition cursor-pointer group"
+                        >
+                          <td className="p-4 text-slate-500 font-mono text-xs select-none">#{publ.id}</td>
+                          <td className="p-4 font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors">{publ.name}</td>
+                          <td className="p-4 text-right space-x-3 text-xs" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => openModal('publisher', publ)} className="text-indigo-400 hover:text-indigo-300 font-semibold transition">Edit</button>
                             <button onClick={() => handleDelete('publishers', publ.id)} className="text-rose-400 hover:text-rose-300 font-semibold transition">Delete</button>
                           </td>
@@ -442,7 +447,11 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Deep Dive Summary Publication Modal Overlay */}
+      {/* ==============================================================
+          MODAL INTERACTIVE VIEW OVERLAY RENDERING TREE
+         ============================================================== */}
+
+      {/* 1. Deep Dive Summary Publication Modal Overlay */}
       {selectedViewPub && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200">
@@ -509,7 +518,7 @@ export default function App() {
         </div>
       )}
 
-      {/* FIX INDEPENDENT LAYERING: Deep Dive Author Profile Modal Overlay */}
+      {/* 2. Deep Dive Author Profile Modal Overlay */}
       {selectedViewAuth && (() => {
         const authorPubs = publications.filter(pub => 
           pub.author_details?.some(a => a.id === selectedViewAuth.id)
@@ -572,6 +581,122 @@ export default function App() {
                 <span className="text-xs font-mono text-slate-500">System Record ID: #{selectedViewAuth.id}</span>
                 <button onClick={() => setSelectedViewAuth(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Profile</button>
               </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 3. Deep Dive Publisher Profile Modal Overlay */}
+      {selectedViewPubl && (() => {
+        const publisherPubs = publications.filter(pub => 
+          pub.publisher_details?.id === selectedViewPubl.id || pub.publisher === selectedViewPubl.id
+        );
+        const corporateInitials = (selectedViewPubl.name || 'P')
+          .split(' ')
+          .map(word => word[0])
+          .join('')
+          .substring(0, 3)
+          .toUpperCase();
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+              
+              <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4 shrink-0">
+                <div className="flex items-center gap-4">
+                  {/* Journal Cover / Publishing Cover Display Block Container */}
+                  <div className="h-16 w-24 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-600 flex flex-col items-center justify-center text-sm font-black text-white shadow-lg border border-amber-400/20 shrink-0 select-none tracking-wider uppercase px-2 text-center leading-tight">
+                    <span className="text-[10px] font-bold opacity-60 tracking-widest block mb-0.5">COVER</span>
+                    {corporateInitials}
+                  </div>
+                  <div className="space-y-1">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest font-mono">
+                      Publishing House Node
+                    </span>
+                    <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">
+                      {selectedViewPubl.name}
+                    </h3>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedViewPubl(null)} 
+                  className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 p-4 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-3">
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Corporate Description</span>
+                      <p className="text-sm text-slate-300 leading-relaxed">
+                        Official digital registry and publishing management node for <span className="text-amber-400 font-semibold">{selectedViewPubl.name}</span>. Tracks peer-reviewed distributions, public sandbox policies, and institutional assets.
+                      </p>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Resource Hyperlink Link</span>
+                      <a 
+                        href="https://ncpag.upd.edu.ph" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs text-indigo-400 hover:text-indigo-300 underline font-mono break-all inline-block mt-0.5"
+                      >
+                        https://ncpag.upd.edu.ph/registry/nodes/{selectedViewPubl.id}
+                      </a>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col justify-center items-center text-center">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Tracked Releases</span>
+                    <div className="text-3xl font-extrabold text-amber-400 font-mono bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-2xl w-full">
+                      {publisherPubs.length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Publications Sub-Table Container Matrix */}
+                <div className="space-y-3">
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Publish Title Releases</span>
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-950/20 overflow-hidden divide-y divide-slate-800/40">
+                    {publisherPubs.length > 0 ? (
+                      publisherPubs.map(pub => (
+                        <div 
+                          key={pub.id} 
+                          onClick={() => {
+                            setSelectedViewPub(pub);
+                            setSelectedViewPubl(null);
+                          }}
+                          className="p-3 hover:bg-slate-900/60 transition cursor-pointer flex items-center justify-between gap-4 group"
+                        >
+                          <div className="min-w-0">
+                            <span className="text-sm font-semibold text-slate-200 group-hover:text-amber-400 transition-colors block truncate">
+                              📄 {pub.title}
+                            </span>
+                            <span className="text-[11px] text-slate-500 block mt-0.5">
+                              Release Date: {pub.publication_date || 'N/A'} &bull; Base Price: ₱{parseFloat(pub.price).toFixed(2)}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-800 border border-slate-700/60 font-medium text-slate-400 whitespace-nowrap shrink-0">
+                            {pub.publication_type}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-500 italic font-medium">
+                        No active manuscript titles registered under this publishing corporation.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
+                <span className="text-xs font-mono text-slate-500">System Entity ID: #{selectedViewPubl.id}</span>
+                <button onClick={() => setSelectedViewPubl(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Viewport</button>
+              </div>
+
             </div>
           </div>
         );
