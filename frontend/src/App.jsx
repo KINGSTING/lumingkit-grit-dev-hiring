@@ -19,6 +19,7 @@ export default function App() {
 
   // Detailed Row-Click Modal View State Managers
   const [selectedViewPub, setSelectedViewPub] = useState(null);
+  const [selectedViewAuth, setSelectedViewAuth] = useState(null);
   
   // Custom Searchable Entry Array Trackers
   const [authorInputValues, setAuthorInputValues] = useState(['']);
@@ -177,10 +178,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       
       {/* Dynamic Header Core */}
-      <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40 overflow-hidden">
+      <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40 overflow-hidden shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
           <div className="flex items-center gap-4 min-w-0">
@@ -236,7 +237,8 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* Main Content Area Container Block */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         {/* System Metrics Analytics Card Blocks */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
@@ -378,11 +380,15 @@ export default function App() {
                     </thead>
                     <tbody className="text-sm divide-y divide-slate-900/50">
                       {filteredItems.map((auth) => (
-                        <tr key={auth.id} className="hover:bg-slate-900/40 transition">
-                          <td className="p-4 text-slate-500 font-mono text-xs">#{auth.id}</td>
-                          <td className="p-4 font-semibold text-slate-200">{auth.last_name}, {auth.first_name}</td>
+                        <tr 
+                          key={auth.id} 
+                          onClick={() => setSelectedViewAuth(auth)}
+                          className="hover:bg-slate-900/60 transition cursor-pointer group"
+                        >
+                          <td className="p-4 text-slate-500 font-mono text-xs select-none">#{auth.id}</td>
+                          <td className="p-4 font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors">{auth.last_name}, {auth.first_name}</td>
                           <td className="p-4 text-slate-400 max-w-sm truncate" title={auth.short_bionote}>{auth.short_bionote || 'None annotated.'}</td>
-                          <td className="p-4 text-right space-x-3 text-xs">
+                          <td className="p-4 text-right space-x-3 text-xs" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => openModal('author', auth)} className="text-indigo-400 hover:text-indigo-300 font-semibold transition">Edit</button>
                             <button onClick={() => handleDelete('authors', auth.id)} className="text-rose-400 hover:text-rose-300 font-semibold transition">Delete</button>
                           </td>
@@ -423,44 +429,40 @@ export default function App() {
         </div>
       </main>
 
-      {/* Deep Dive Summary Modal Overlay */}
+      {/* Footer Component Modular Layer */}
+      <footer className="border-t border-slate-800 bg-slate-950/40 backdrop-blur py-6 text-xs text-slate-500 shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="font-medium tracking-wide">
+            &copy; 2026 GRIT Hub Archive. All rights reserved.
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <a href="https://ncpag.upd.edu.ph" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 font-semibold transition-colors duration-150 underline decoration-slate-700 hover:decoration-indigo-400/40 underline-offset-4">UP NCPAG Portal</a>
+            <a href="https://www.facebook.com/UPNCPAGGRITLabs" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 font-semibold transition-colors duration-150 underline decoration-slate-700 hover:decoration-indigo-400/40 underline-offset-4">GRIT Labs Community</a>
+          </div>
+        </div>
+      </footer>
+
+      {/* Deep Dive Summary Publication Modal Overlay */}
       {selectedViewPub && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200">
-            
             <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4">
               <div className="space-y-1">
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest font-mono">
-                  {selectedViewPub.publication_type}
-                </span>
-                <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">
-                  {selectedViewPub.title}
-                </h3>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest font-mono">{selectedViewPub.publication_type}</span>
+                <h3 className="font-bold text-white text-lg tracking-tight leading-snug mt-1">{selectedViewPub.title}</h3>
               </div>
-              <button 
-                onClick={() => setSelectedViewPub(null)} 
-                className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition"
-              >
-                &times;
-              </button>
+              <button onClick={() => setSelectedViewPub(null)} className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition">&times;</button>
             </div>
-
             <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Authors ({selectedViewPub.author_details?.length || 0})
-                  </span>
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Authors ({selectedViewPub.author_details?.length || 0})</span>
                   <div className="flex flex-col gap-1.5">
                     {selectedViewPub.author_details && selectedViewPub.author_details.length > 0 ? (
                       selectedViewPub.author_details.map(auth => (
                         <div key={auth.id} className="text-sm font-semibold text-slate-200">
                           ✍️ {auth.first_name} {auth.last_name}
-                          {auth.short_bionote && (
-                            <span className="block text-xs font-normal text-slate-400 pl-5 mt-0.5 italic">
-                              {auth.short_bionote}
-                            </span>
-                          )}
+                          {auth.short_bionote && <span className="block text-xs font-normal text-slate-400 pl-5 mt-0.5 italic">{auth.short_bionote}</span>}
                         </div>
                       ))
                     ) : (
@@ -468,15 +470,10 @@ export default function App() {
                     )}
                   </div>
                 </div>
-
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col justify-between">
                   <div>
-                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Publisher
-                    </span>
-                    <span className="text-sm font-semibold text-slate-200 block mt-1">
-                      🏢 {selectedViewPub.publisher_details?.name || 'Unassigned Node'}
-                    </span>
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Publisher</span>
+                    <span className="text-sm font-semibold text-slate-200 block mt-1">🏢 {selectedViewPub.publisher_details?.name || 'Unassigned Node'}</span>
                   </div>
                   <div className="pt-4 border-t border-slate-800/60 mt-4 grid grid-cols-2 gap-2">
                     <div>
@@ -490,56 +487,110 @@ export default function App() {
                   </div>
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div>
                   <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Abstract / Description</span>
                   <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-800/60 text-sm text-slate-300 leading-relaxed max-w-none">
-                    {selectedViewPub.abstract || selectedViewPub.description || (
-                      <span className="text-slate-500 italic text-xs">No description mapped.</span>
-                    )}
+                    {selectedViewPub.abstract || selectedViewPub.description || <span className="text-slate-500 italic text-xs">No description mapped.</span>}
                   </div>
                 </div>
               </div>
             </div>
-
             <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-400">Price:</span>
                 <span className="font-mono text-base font-bold">
-                  {parseFloat(selectedViewPub.price) === 0 ? (
-                    <span className="text-emerald-400 uppercase text-sm tracking-wider">Free</span>
-                  ) : (
-                    <span className="text-emerald-400">₱{parseFloat(selectedViewPub.price).toFixed(2)}</span>
-                  )}
+                  {parseFloat(selectedViewPub.price) === 0 ? <span className="text-emerald-400 uppercase text-sm tracking-wider">Free</span> : <span className="text-emerald-400">₱{parseFloat(selectedViewPub.price).toFixed(2)}</span>}
                 </span>
               </div>
               <button onClick={() => setSelectedViewPub(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Viewport</button>
             </div>
-
           </div>
         </div>
       )}
 
+      {/* FIX INDEPENDENT LAYERING: Deep Dive Author Profile Modal Overlay */}
+      {selectedViewAuth && (() => {
+        const authorPubs = publications.filter(pub => 
+          pub.author_details?.some(a => a.id === selectedViewAuth.id)
+        );
+        const initials = `${selectedViewAuth.first_name?.[0] || ''}${selectedViewAuth.last_name?.[0] || ''}`.toUpperCase();
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border-t border-slate-700/30 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+              <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4 shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white shadow-md border border-indigo-400/20 shrink-0 select-none">
+                    {initials || "✍️"}
+                  </div>
+                  <div className="space-y-1">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest font-mono">Scholar Profile</span>
+                    <h3 className="font-bold text-white text-xl tracking-tight leading-snug mt-1">{selectedViewAuth.first_name} {selectedViewAuth.last_name}</h3>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedViewAuth(null)} className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 h-8 w-8 rounded-full flex items-center justify-center transition">&times;</button>
+              </div>
+              <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 p-4 rounded-xl bg-slate-950/40 border border-slate-800/80">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Biographical Context</span>
+                    <p className="text-sm text-slate-300 leading-relaxed italic">"{selectedViewAuth.short_bionote || 'No supplementary biographical context annotated for this profile node.'}"</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col justify-center items-center text-center">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Total Publications</span>
+                    <div className="text-3xl font-extrabold text-indigo-400 font-mono bg-indigo-500/5 border border-indigo-500/10 px-4 py-2 rounded-2xl w-full">{authorPubs.length}</div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">List of Publications</span>
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-950/20 overflow-hidden divide-y divide-slate-800/40">
+                    {authorPubs.length > 0 ? (
+                      authorPubs.map(pub => (
+                        <div 
+                          key={pub.id} 
+                          onClick={() => {
+                            setSelectedViewPub(pub);
+                            setSelectedViewAuth(null);
+                          }}
+                          className="p-3 hover:bg-slate-900/60 transition cursor-pointer flex items-center justify-between gap-4 group"
+                        >
+                          <div className="min-w-0">
+                            <span className="text-sm font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors block truncate">📚 {pub.title}</span>
+                            <span className="text-[11px] text-slate-500 block mt-0.5">Publisher: {pub.publisher_details?.name || 'N/A'} &bull; Date: {pub.publication_date || 'N/A'}</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-800 border border-slate-700/60 font-medium text-slate-400 whitespace-nowrap shrink-0">{pub.publication_type}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-500 italic font-medium">No historical publication nodes currently bound to this scholar profile.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
+                <span className="text-xs font-mono text-slate-500">System Record ID: #{selectedViewAuth.id}</span>
+                <button onClick={() => setSelectedViewAuth(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Profile</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Publication Form Overlay */}
       {modalType === 'publication' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          {/* FIX 1: Max width scaled up to max-w-3xl for optimal grid presentation spacing */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150 relative z-50 flex flex-col my-auto">
-            
             <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40 shrink-0">
               <h3 className="font-bold text-white text-base">{editId ? 'Modify Archival Node' : 'Register New Publication'}</h3>
               <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-white text-lg transition">&times;</button>
             </div>
-            
-            {/* FIX 2: Added structural max height bounding logic with internal scrolling configuration to fit 100% display screens safely */}
             <form onSubmit={(e) => handleFormSubmit(e, 'publications', pubForm)} className="flex-1 flex flex-col min-h-0">
               <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(100vh-14rem)] custom-scrollbar">
                 <div>
                   <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publication Title</label>
                   <input type="text" value={pubForm.title} onChange={e => setPubForm({...pubForm, title: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" placeholder="e.g. Seal of Good Local Governance Metrics Development" />
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Type</label>
@@ -558,132 +609,74 @@ export default function App() {
 
                 {/* SEARCH DROPDOWN ENTRY ROWS MODULE */}
                 <div className="space-y-4 bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 relative">
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
-                    Author/s
-                  </label>
-                  
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Author/s</label>
                   {authorInputValues.map((textValue, rowIndex) => {
-                    const matchingSuggestions = authors.filter(a => 
-                      `${a.first_name} ${a.last_name}`.toLowerCase().includes(textValue.toLowerCase())
-                    );
-                    const isDbMatchMissing = textValue.trim().length > 0 && !authors.some(a => 
-                      `${a.first_name} ${a.last_name}`.toLowerCase() === textValue.toLowerCase().trim()
-                    );
+                    const matchingSuggestions = authors.filter(a => `${a.first_name} ${a.last_name}`.toLowerCase().includes(textValue.toLowerCase()));
+                    const isDbMatchMissing = textValue.trim().length > 0 && !authors.some(a => `${a.first_name} ${a.last_name}`.toLowerCase() === textValue.toLowerCase().trim());
 
                     return (
                       <div key={rowIndex} className="space-y-1 relative">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
-                          {rowIndex === 0 ? "First Author / Lead Principal" : `Co-Author Row #${rowIndex}`}
-                        </span>
-                        
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">{rowIndex === 0 ? "First Author / Lead Principal" : `Co-Author Row #${rowIndex}`}</span>
                         <div className="flex items-center gap-2 relative">
                           <div className="flex-1 relative">
-                            <input 
-                              type="text"
-                              value={textValue}
-                              required={rowIndex === 0}
-                              onFocus={() => setActiveDropdownIndex(rowIndex)}
-                              onChange={(e) => {
-                                const updatedTextValues = [...authorInputValues];
-                                updatedTextValues[rowIndex] = e.target.value;
-                                setAuthorInputValues(updatedTextValues);
-
-                                const updatedIds = [...(pubForm.authors || [])];
-                                updatedIds[rowIndex] = "";
-                                setPubForm({ ...pubForm, authors: updatedIds });
-                              }}
-                              placeholder="Click or type to search registered authors..."
-                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-                            />
-
-                            {/* Floating Suggestion Overlays */}
+                            <input type="text" value={textValue} required={rowIndex === 0} onFocus={() => setActiveDropdownIndex(rowIndex)} onChange={(e) => {
+                              const updatedTextValues = [...authorInputValues];
+                              updatedTextValues[rowIndex] = e.target.value;
+                              setAuthorInputValues(updatedTextValues);
+                              const updatedIds = [...(pubForm.authors || [])];
+                              updatedIds[rowIndex] = "";
+                              setPubForm({ ...pubForm, authors: updatedIds });
+                            }} placeholder="Click or type to search registered authors..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition" />
                             {activeDropdownIndex === rowIndex && (
                               <div className="absolute top-full left-0 w-full bg-slate-950 border border-slate-800 mt-1 rounded-xl shadow-2xl overflow-hidden z-50 max-h-40 overflow-y-auto divide-y divide-slate-900/60">
                                 {matchingSuggestions.map(authorObj => (
-                                  <div
-                                    key={authorObj.id}
-                                    onMouseDown={() => {
-                                      const updatedTextValues = [...authorInputValues];
-                                      updatedTextValues[rowIndex] = `${authorObj.first_name} ${authorObj.last_name}`;
-                                      setAuthorInputValues(updatedTextValues);
-
-                                      const updatedIds = [...(pubForm.authors || [])];
-                                      updatedIds[rowIndex] = authorObj.id;
-                                      setPubForm({ ...pubForm, authors: updatedIds });
-                                      
-                                      setActiveDropdownIndex(null); 
-                                    }}
-                                    className="px-4 py-2 text-xs text-slate-300 hover:bg-indigo-600 hover:text-white cursor-pointer font-medium transition text-left"
-                                  >
-                                    ✨ {authorObj.last_name}, {authorObj.first_name}
-                                  </div>
+                                  <div key={authorObj.id} onMouseDown={() => {
+                                    const updatedTextValues = [...authorInputValues];
+                                    updatedTextValues[rowIndex] = `${authorObj.first_name} ${authorObj.last_name}`;
+                                    setAuthorInputValues(updatedTextValues);
+                                    const updatedIds = [...(pubForm.authors || [])];
+                                    updatedIds[rowIndex] = authorObj.id;
+                                    setPubForm({ ...pubForm, authors: updatedIds });
+                                    setActiveDropdownIndex(null); 
+                                  }} className="px-4 py-2 text-xs text-slate-300 hover:bg-indigo-600 hover:text-white cursor-pointer font-medium transition text-left">✨ {authorObj.last_name}, {authorObj.first_name}</div>
                                 ))}
-
                                 {isDbMatchMissing && (
-                                  <div 
-                                    onMouseDown={() => handleTriggerRegistration(textValue)}
-                                    className="px-4 py-2.5 bg-indigo-950/40 text-indigo-400 hover:bg-indigo-600 hover:text-white cursor-pointer text-xs font-bold transition flex items-center justify-between gap-2"
-                                  >
+                                  <div onMouseDown={() => handleTriggerRegistration(textValue)} className="px-4 py-2.5 bg-indigo-950/40 text-indigo-400 hover:bg-indigo-600 hover:text-white cursor-pointer text-xs font-bold transition flex items-center justify-between gap-2">
                                     <span>⚠️ "{textValue}" is not registered.</span>
                                     <span className="underline">Register &rarr;</span>
                                   </div>
                                 )}
-                                
-                                {matchingSuggestions.length === 0 && !isDbMatchMissing && (
-                                  <div className="px-4 py-2 text-xs text-slate-500 italic text-left">No matching authors found.</div>
-                                )}
+                                {matchingSuggestions.length === 0 && !isDbMatchMissing && <div className="px-4 py-2 text-xs text-slate-500 italic text-left">No matching authors found.</div>}
                               </div>
                             )}
                           </div>
-
                           {rowIndex > 0 && (
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                const updatedTextValues = authorInputValues.filter((_, i) => i !== rowIndex);
-                                setAuthorInputValues(updatedTextValues);
-
-                                const updatedIds = (pubForm.authors || []).filter((_, i) => i !== rowIndex);
-                                setPubForm({ ...pubForm, authors: updatedIds });
-                                
-                                if (activeDropdownIndex === rowIndex) setActiveDropdownIndex(null);
-                              }}
-                              className="bg-slate-950 hover:bg-rose-950/40 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 h-10 w-10 rounded-xl flex items-center justify-center transition"
-                            >
-                              &times;
-                            </button>
+                            <button type="button" onClick={() => {
+                              const updatedTextValues = authorInputValues.filter((_, i) => i !== rowIndex);
+                              setAuthorInputValues(updatedTextValues);
+                              const updatedIds = (pubForm.authors || []).filter((_, i) => i !== rowIndex);
+                              setPubForm({ ...pubForm, authors: updatedIds });
+                              if (activeDropdownIndex === rowIndex) setActiveDropdownIndex(null);
+                            }} className="bg-slate-950 hover:bg-rose-950/40 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 h-10 w-10 rounded-xl flex items-center justify-center transition">&times;</button>
                           )}
                         </div>
                       </div>
                     );
                   })}
-
                   <div className="flex justify-start pt-1">
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        setAuthorInputValues([...authorInputValues, '']);
-                        setPubForm({ ...pubForm, authors: [...(pubForm.authors || []), ''] });
-                        setActiveDropdownIndex(authorInputValues.length);
-                      }}
-                      className="py-1.5 px-3 rounded-lg border border-dashed border-slate-700 hover:border-indigo-500/50 bg-slate-900/30 hover:bg-indigo-950/20 text-slate-400 hover:text-indigo-400 text-[11px] font-semibold transition flex items-center gap-1 active:scale-95"
-                    >
-                      <span className="text-xs font-bold">+</span> Add Co-Author Row
-                    </button>
+                    <button type="button" onClick={() => {
+                      setAuthorInputValues([...authorInputValues, '']);
+                      setPubForm({ ...pubForm, authors: [...(pubForm.authors || []), ''] });
+                      setActiveDropdownIndex(authorInputValues.length);
+                    }} className="py-1.5 px-3 rounded-lg border border-dashed border-slate-700 hover:border-indigo-500/50 bg-slate-900/30 hover:bg-indigo-950/20 text-slate-400 hover:text-indigo-400 text-[11px] font-semibold transition flex items-center gap-1 active:scale-95"><span className="text-xs font-bold">+</span> Add Co-Author Row</button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publisher</label>
-                    <select 
-                      value={pubForm.publisher} 
-                      onChange={e => setPubForm({...pubForm, publisher: e.target.value})} 
-                      required 
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-                    >
-                      {/* UPGRADED: Added disabled and hidden attributes to enforce a true unselectable placeholder layout */}
-                      <option value="" disabled hidden>-- Choose Relational Node --</option>
+                    <select value={pubForm.publisher} onChange={e => setPubForm({...pubForm, publisher: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                      <option value="" disabled hidden>-- Select Registered Publisher --</option>
                       {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
@@ -696,23 +689,15 @@ export default function App() {
                 {/* CLEAN UNIFIED ABSTRACT / DESCRIPTION METADATA ROW */}
                 <div>
                   <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Abstract / Description</label>
-                  <textarea 
-                    value={pubForm.abstract || pubForm.description || ''} 
-                    onChange={e => {
-                      const val = e.target.value;
-                      setPubForm({ ...pubForm, abstract: val, description: val });
-                    }} 
-                    rows="4" 
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition resize-none" 
-                    placeholder="Enter abstract summary text or supplementary context description..."
-                  ></textarea>
+                  <textarea value={pubForm.abstract || pubForm.description || ''} onChange={e => {
+                    const val = e.target.value;
+                    setPubForm({ ...pubForm, abstract: val, description: val });
+                  }} rows="4" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition resize-none" placeholder="Enter abstract summary text or supplementary context description..." ></textarea>
                 </div>
               </div>
 
               {/* Shutter overlay to dismiss dropdown upon clicking away */}
-              {activeDropdownIndex !== null && (
-                <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setActiveDropdownIndex(null)} />
-              )}
+              {activeDropdownIndex !== null && <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setActiveDropdownIndex(null)} />}
 
               <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/40 flex justify-end gap-2 shrink-0 relative z-20">
                 <button type="button" onClick={() => setModalType(null)} className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition">Cancel</button>
