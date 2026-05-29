@@ -676,8 +676,14 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">Publisher</label>
-                    <select value={pubForm.publisher} onChange={e => setPubForm({...pubForm, publisher: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
-                      <option value="">-- Choose Relational Node --</option>
+                    <select 
+                      value={pubForm.publisher} 
+                      onChange={e => setPubForm({...pubForm, publisher: e.target.value})} 
+                      required 
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      {/* UPGRADED: Added disabled and hidden attributes to enforce a true unselectable placeholder layout */}
+                      <option value="" disabled hidden>-- Choose Relational Node --</option>
                       {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
