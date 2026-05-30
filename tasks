@@ -14,7 +14,7 @@ Creation Buttons:
                     [/] Change Document Authors Registry to Author/s
                     [/] Make sure first author is the one displayed
                     [/] Change publisher assignment (3NF) to Publisher
-                    [] Make upload photo connect to cloudinary
+                    [/] Make upload photo connect to cloudinary
 
 Publication Detail Modal:
                            [/] Change "Financial Valuation Matrix" to "Price"
@@ -26,16 +26,16 @@ Publication Detail Modal:
 
 Author Detail Modal:    
                         [/] When user clicks the author it will open a modal that show detailed info of the author
-                        [] Connect to Cloudinary, make uploading author self photo available
+                        [/] Connect to Cloudinary, make uploading author self photo available
                         [/] Make detail modal have author photo, name, bionote, number of publications, list of publication at the bottom
                         
 Publisher Detail Modal:
                         [/] Make it clickable to have detailed modal
-                        [] We need upload photos as journal cover or publishing cover photo 
-                        [] Make this journal cover or publishing cover displayed in the detail modal
+                        [/] We need upload photos as journal cover or publishing cover photo 
+                        [/] Make this journal cover or publishing cover displayed in the detail modal
                         [/] Detail modal Publish Title, Photo (Cover Image), Link, description
                         
-                        
+           [] No duplicate of names and title             
                         
 NEXT FEATURE:
                 [] Digital Asset Storage & Long-Term Preservation
@@ -51,3 +51,7 @@ NEXT FEATURE:
                         [] Role-Based Access Control (RBAC): Set up specific access tiers (e.g., Anonymous Public User = Read-Only; Scholar/Author = Edit Profile; Archive Admin/Editor = Full CRUD).
                         [] Audit Logging: Build an internal system logging model to track every time a file is deleted, a record is edited, or a user logs in, maintaining structural accountability for your digital archive.
                 [] Write a script that scrape publication data and formats it according to the schema
+                
+                
+         [] With actually publication data
+         [] Submit throuugh email

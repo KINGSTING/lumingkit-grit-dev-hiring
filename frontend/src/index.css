@@ -27,7 +27,7 @@
   --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
 
   /* Global Rules */
-  font: 18px/145% var(--sans);
+  font: 16px/145% var(--sans);     /* reduced from 18px to 16px */
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text-muted);
@@ -64,7 +64,7 @@
 /* Responsive Root Font Sizing */
 @media (max-width: 1024px) {
   :root {
-    font-size: 16px;
+    font-size: 14px;   /* even smaller on tablets */
   }
 }
 
@@ -83,13 +83,13 @@ body {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  text-align: left; /* Restores default layouts; change to center if desired */
+  text-align: left;
   background-color: var(--bg-main);
   border-inline: 1px solid var(--border-muted);
   box-shadow: var(--shadow);
 }
 
-/* --- TYPOGRAPHY --- */
+/* --- TYPOGRAPHY (reduced sizes) --- */
 h1, h2 {
   font-family: var(--heading);
   font-weight: 500;
@@ -97,15 +97,15 @@ h1, h2 {
 }
 
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
+  font-size: 32px;           /* was 56px */
+  letter-spacing: -0.5px;    /* adjusted */
+  margin: 24px 0 16px;       /* reduced vertical space */
 }
 
 h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
+  font-size: 20px;           /* was 24px */
+  line-height: 1.2;
+  letter-spacing: -0.2px;
   margin: 0 0 8px;
 }
 
@@ -121,19 +121,22 @@ code, .counter {
 }
 
 code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
+  font-size: 14px;           /* was 15px */
+  line-height: 1.35;
+  padding: 2px 6px;          /* slightly smaller padding */
   background: var(--code-bg);
 }
 
 /* --- RESPONSIVE TYPOGRAPHY CONTROLS --- */
 @media (max-width: 1024px) {
   h1 {
-    font-size: 36px;
-    margin: 20px 0;
+    font-size: 28px;
+    margin: 20px 0 12px;
   }
   h2 {
-    font-size: 20px;
+    font-size: 18px;
+  }
+  code {
+    font-size: 13px;
   }
 }
