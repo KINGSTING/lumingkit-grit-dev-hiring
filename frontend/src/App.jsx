@@ -27,7 +27,7 @@ export default function App() {
   const [authorInputValues, setAuthorInputValues] = useState(['']);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState(null);
 
-  // Form Binding States - Cleaned publication configuration bindings
+  // Form Binding States - Standardized 3NF schemas
   const [pubForm, setPubForm] = useState({ title: '', publication_type: 'Journal Article', publication_date: '', price: '0.00', description: '', abstract: '', authors: [], publisher: '' });
   const [authForm, setAuthForm] = useState({ first_name: '', last_name: '', short_bionote: '', image_url: '' });
   const [publForm, setPublForm] = useState({ name: '', image_url: '' });
@@ -65,6 +65,7 @@ export default function App() {
     uploadData.append('target', targetType);
 
     try {
+      // FIX: Added the absolute trailing slash to eliminate OPTIONS redirect drops
       const res = await fetch(`${API_BASE_URL}/upload/`, {
         method: 'POST',
         body: uploadData,
@@ -500,7 +501,7 @@ export default function App() {
               
               <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4">
                 <div className="flex items-center gap-4">
-                  {/* Pulls Cover image directly from parent publisher element arrays */}
+                  {/* Pulls Cover image directly from parent publisher elements to preserve 3NF constraints */}
                   {selectedViewPub.publisher_details?.image_url ? (
                     <img src={selectedViewPub.publisher_details.image_url} alt={selectedViewPub.title} className="h-16 w-24 rounded-xl object-cover shadow-lg border border-slate-700 shrink-0" />
                   ) : (

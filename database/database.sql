@@ -203,3 +203,9 @@ LOCK TABLES `django_migrations` WRITE;
 INSERT INTO `django_migrations` (`id`, `app`, `name`, `applied`) VALUES 
 (1,'contenttypes','0001_initial',NOW(6)),(2,'auth','0001_initial',NOW(6)),(3,'admin','0001_initial',NOW(6)),(4,'admin','0002_logentry_remove_auto_add',NOW(6)),(5,'admin','0003_logentry_add_action_flag_choices',NOW(6)),(6,'contenttypes','0002_remove_content_type_name',NOW(6)),(7,'auth','0002_alter_permission_name_max_length',NOW(6)),(8,'auth','0003_alter_user_email_max_length',NOW(6)),(9,'auth','0004_alter_user_username_opts',NOW(6)),(10,'auth','0005_alter_user_last_login_null',NOW(6)),(11,'auth','0006_require_contenttypes_0002',NOW(6)),(12,'auth','0007_alter_validators_add_error_messages',NOW(6)),(13,'auth','0008_alter_user_username_max_length',NOW(6)),(14,'auth','0009_alter_user_last_name_max_length',NOW(6)),(15,'auth','0010_alter_group_name_max_length',NOW(6)),(16,'auth','0011_update_proxy_permissions',NOW(6)),(17,'auth','0012_alter_user_first_name_max_length',NOW(6)),(18,'sessions','0001_initial',NOW(6)),(19,'api','0001_initial',NOW(6));
 UNLOCK TABLES;
+
+-- Append to your API_AUTHOR table schema
+ALTER TABLE API_AUTHOR ADD COLUMN image_url TEXT NULL;
+
+-- Append to your API_PUBLISHER table schema
+ALTER TABLE API_PUBLISHER ADD COLUMN image_url TEXT NULL;

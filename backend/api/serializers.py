@@ -1,21 +1,22 @@
+# serializers.py
 from rest_framework import serializers
 from .models import Publisher, Author, Publication
 
 class PublisherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Publisher
-        fields = ['id', 'name']
+        # FIX: Include 'image_url' in the serialization pipeline
+        fields = ['id', 'name', 'image_url']
 
 
 class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Author
-        fields = ['id', 'first_name', 'last_name', 'short_bionote']
+        # FIX: Include 'image_url' in the serialization pipeline
+        fields = ['id', 'first_name', 'last_name', 'short_bionote', 'image_url']
 
 
 class PublicationSerializer(serializers.ModelSerializer):
-    # --- WRITING / INCOMING PAYLOADS ---
-    # FIX: Changed from 'author' to 'authors' with many=True to handle lists of IDs [1, 2, ...]
     authors = serializers.PrimaryKeyRelatedField(
         queryset=Author.objects.all(), 
         many=True
@@ -24,8 +25,6 @@ class PublicationSerializer(serializers.ModelSerializer):
         queryset=Publisher.objects.all()
     )
     
-    # --- READING / FRONTEND VISUALS ---
-    # FIX: Set source='authors' to parse the structural relation correctly
     author_details = AuthorSerializer(source='authors', many=True, read_only=True)
     publisher_details = PublisherSerializer(source='publisher', read_only=True)
 
@@ -34,6 +33,6 @@ class PublicationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'publication_type', 'publication_date', 
             'price', 'description', 'abstract', 
-            'authors', 'publisher',               # Read/Write IDs (Array for authors)
-            'author_details', 'publisher_details' # Rich UI Rendering Content Objects
+            'authors', 'publisher',               
+            'author_details', 'publisher_details' 
         ]
