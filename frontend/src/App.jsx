@@ -18,7 +18,8 @@ export default function App() {
 
   // Modal controllers
   const [modalType, setModalType] = useState(null); // 'publication', 'author', 'publisher'
-  const [editId, setEditId] = useState(null);
+  const [editId, setEditId] = useState(null); // still store id internally
+  const [editDoi, setEditDoi] = useState(null); // store doi for edit/delete
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Detailed view modals
@@ -32,6 +33,7 @@ export default function App() {
 
   // Form states
   const [pubForm, setPubForm] = useState({
+    doi: '',                    // DOI still stored
     title: '',
     publication_type: 'Journal Article',
     publication_date: '',
@@ -40,7 +42,7 @@ export default function App() {
     abstract: '',
     authors: [],
     publisher: '',
-    pdf_url: ''        // <-- NEW: store Cloudinary URL of the PDF
+    pdf_url: ''
   });
   const [authForm, setAuthForm] = useState({
     first_name: '',
@@ -112,7 +114,7 @@ export default function App() {
     }
   };
 
-  // NEW: handle PDF upload for publications
+  // PDF upload for publications
   const handlePublicationFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -124,7 +126,7 @@ export default function App() {
     setUploadingImage(true);
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('target', 'publication');   // store in grithub_archive/publications/
+    formData.append('target', 'publication');
 
     try {
       const res = await fetch(`${API_BASE_URL}/upload/`, {
@@ -211,7 +213,8 @@ export default function App() {
           `${auth.first_name || ''} ${auth.last_name || ''}`.toLowerCase().includes(query)
         );
         const publisherMatch = pub.publisher_details?.name?.toLowerCase().includes(query);
-        return titleMatch || typeMatch || priceMatch || authorMatch || publisherMatch;
+        const doiMatch = pub.doi?.toLowerCase().includes(query); // still searchable but not displayed
+        return titleMatch || typeMatch || priceMatch || authorMatch || publisherMatch || doiMatch;
       });
     }
 
@@ -249,6 +252,7 @@ export default function App() {
 
     if (existingRecord) {
       setEditId(existingRecord.id);
+      setEditDoi(existingRecord.doi);   // store DOI for URL construction
       if (type === 'publication') {
         const authorIds = existingRecord.author_details?.map(a => a.id) || [];
         const textValues = existingRecord.author_details?.map(a => `${a.first_name || ''} ${a.last_name || ''}`) || [];
@@ -256,7 +260,8 @@ export default function App() {
           ...existingRecord,
           authors: authorIds,
           publisher: existingRecord.publisher_details?.id || existingRecord.publisher,
-          pdf_url: existingRecord.pdf_url || ''    // <-- load existing PDF URL
+          pdf_url: existingRecord.pdf_url || '',
+          doi: existingRecord.doi || ''
         });
         setAuthorInputValues(textValues.length ? textValues : ['']);
       }
@@ -268,7 +273,9 @@ export default function App() {
       }
     } else {
       setEditId(null);
+      setEditDoi(null);
       setPubForm({
+        doi: '',
         title: '',
         publication_type: 'Journal Article',
         publication_date: '',
@@ -288,7 +295,6 @@ export default function App() {
   const handleFormSubmit = async (e, endpoint, payload) => {
     e.preventDefault();
 
-    // Final validation before submit
     if (endpoint === 'authors' && !validateAuthorForm(payload.first_name, payload.last_name)) return;
     if (endpoint === 'publishers' && !validatePublisherForm(payload.name)) return;
     if (endpoint === 'publications' && !validatePublicationForm(payload.title)) return;
@@ -299,7 +305,13 @@ export default function App() {
     }
 
     const method = editId ? 'PUT' : 'POST';
-    const url = editId ? `${API_BASE_URL}/${endpoint}/${editId}/` : `${API_BASE_URL}/${endpoint}/`;
+    // Use DOI instead of id for publications
+    let url;
+    if (endpoint === 'publications') {
+      url = editId ? `${API_BASE_URL}/${endpoint}/${editDoi}/` : `${API_BASE_URL}/${endpoint}/`;
+    } else {
+      url = editId ? `${API_BASE_URL}/${endpoint}/${editId}/` : `${API_BASE_URL}/${endpoint}/`;
+    }
 
     try {
       const res = await fetch(url, {
@@ -319,10 +331,16 @@ export default function App() {
     }
   };
 
-  const handleDelete = async (endpoint, id) => {
+  const handleDelete = async (endpoint, id, doi = null) => {
     if (!window.confirm('Delete this record permanently?')) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/${endpoint}/${id}/`, { method: 'DELETE' });
+      let url;
+      if (endpoint === 'publications' && doi) {
+        url = `${API_BASE_URL}/${endpoint}/${doi}/`;
+      } else {
+        url = `${API_BASE_URL}/${endpoint}/${id}/`;
+      }
+      const res = await fetch(url, { method: 'DELETE' });
       if (res.ok) fetchAllData();
     } catch (err) {
       console.error('Delete failed:', err);
@@ -418,31 +436,42 @@ export default function App() {
             <div className="py-20 text-center">Loading...</div>
           ) : (
             <div className="p-2 overflow-x-auto">
-              {/* Publications table */}
               {activeTab === 'publications' && (
                 <table className="w-full text-left">
                   <thead className="text-xs text-slate-400 border-b border-slate-800">
-                    <tr><th className="p-4">Title</th><th>Type</th><th>Author(s)</th><th>Publisher</th><th>Price</th><th className="text-right">Actions</th></tr>
+                    <tr>
+                      <th className="p-4">Title</th>
+                      <th className="p-4">Type</th>
+                      <th className="p-4">Author(s)</th>
+                      <th className="p-4">Publisher</th>
+                      <th className="p-4">Price</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {filteredItems.map(pub => (
                       <tr key={pub.id} onClick={() => setSelectedViewPub(pub)} className="hover:bg-slate-900/60 cursor-pointer">
                         <td className="p-4 font-semibold">{pub.title}</td>
-                        <td><span className="px-2 py-0.5 rounded-md text-xs bg-slate-800">{pub.publication_type}</span></td>
-                        <td>{pub.author_details?.[0]?.first_name} {pub.author_details?.[0]?.last_name}{pub.author_details?.length > 1 && <span className="text-xs ml-1">et al.</span>}</td>
-                        <td>{pub.publisher_details?.name || 'N/A'}</td>
-                        <td>{pub.price == 0 ? 'Free' : `₱${parseFloat(pub.price).toFixed(2)}`}</td>
-                        <td className="text-right space-x-2" onClick={e => e.stopPropagation()}>
+                        <td className="p-4"><span className="px-2 py-0.5 rounded-md text-xs bg-slate-800">{pub.publication_type}</span></td>
+                        <td className="p-4">
+                          {pub.author_details?.[0]?.first_name} {pub.author_details?.[0]?.last_name}
+                          {pub.author_details?.length > 1 && <span className="text-xs ml-1">et al.</span>}
+                        </td>
+                        <td className="p-4">{pub.publisher_details?.name || 'N/A'}</td>
+                        <td className="p-4">{pub.price == 0 ? 'Free' : `₱${parseFloat(pub.price).toFixed(2)}`}</td>
+                        <td className="p-4 text-right space-x-2" onClick={e => e.stopPropagation()}>
                           <button onClick={() => openModal('publication', pub)} className="text-indigo-400">Edit</button>
-                          <button onClick={() => handleDelete('publications', pub.id)} className="text-rose-400">Delete</button>
+                          <button onClick={() => handleDelete('publications', pub.id, pub.doi)} className="text-rose-400">Delete</button>
                         </td>
                       </tr>
                     ))}
+                    {filteredItems.length === 0 && (
+                      <tr><td colSpan="6" className="text-center py-12 text-xs text-slate-500">No publications found.</td></tr>
+                    )}
                   </tbody>
                 </table>
               )}
 
-              {/* Authors table */}
               {activeTab === 'authors' && (
                 <table className="w-full text-left">
                   <thead className="text-xs text-slate-400 border-b border-slate-800">
@@ -464,7 +493,6 @@ export default function App() {
                 </table>
               )}
 
-              {/* Publishers table */}
               {activeTab === 'publishers' && (
                 <table className="w-full text-left">
                   <thead className="text-xs text-slate-400 border-b border-slate-800">
@@ -493,7 +521,7 @@ export default function App() {
           DETAILED VIEW MODALS (Publication, Author, Publisher)
          ============================================================== */}
 
-      {/* ----- Publication Detail Modal (with PDF download link) ----- */}
+      {/* ----- Publication Detail Modal (with PDF + DOI) ----- */}
       {selectedViewPub && (() => {
         const corporateInitials = (selectedViewPub.publisher_details?.name || 'P')
           .split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase();
@@ -520,19 +548,23 @@ export default function App() {
                   <div className="p-4 rounded-xl bg-slate-950/60">
                     <div className="text-xs font-bold text-slate-500">Publisher</div>
                     <div className="mt-2 text-sm">🏢 {selectedViewPub.publisher_details?.name}</div>
-                    {/* NEW: PDF download link inside publisher box */}
+                    {/* PDF download link */}
                     {selectedViewPub.pdf_url && (
                       <div className="mt-3 pt-2 border-t border-slate-700/50">
-                        <a
-                          href={selectedViewPub.pdf_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition"
-                        >
-                          📄 Download PDF
-                        </a>
+                        <a href={selectedViewPub.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition">📄 Download PDF</a>
                       </div>
                     )}
+                    {/* DOI display with link */}
+                    <div className="mt-3 pt-2 border-t border-slate-700/50">
+                      <div className="text-xs font-bold text-slate-500">DOI</div>
+                      {selectedViewPub.doi ? (
+                        <a href={`https://doi.org/${selectedViewPub.doi}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline break-all">
+                          {selectedViewPub.doi}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-500">Not assigned</span>
+                      )}
+                    </div>
                     <div className="mt-4 text-xs">📅 {selectedViewPub.publication_date} &nbsp;|&nbsp; 🆔 #{selectedViewPub.id}</div>
                   </div>
                 </div>
@@ -634,10 +666,10 @@ export default function App() {
       })()}
 
       {/* ==============================================================
-          FORM MODALS (Create/Edit with duplicate validation)
+          FORM MODALS
          ============================================================== */}
 
-      {/* Publication Form Modal (with PDF upload) */}
+      {/* Publication Form Modal (with DOI and PDF upload) */}
       {modalType === 'publication' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col">
@@ -647,6 +679,19 @@ export default function App() {
             </div>
             <form onSubmit={(e) => handleFormSubmit(e, 'publications', pubForm)} className="flex-1 overflow-auto">
               <div className="p-6 space-y-4">
+                {/* DOI Field */}
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400">DOI (Digital Object Identifier)</label>
+                  <input
+                    type="text"
+                    value={pubForm.doi || ''}
+                    onChange={(e) => setPubForm({...pubForm, doi: e.target.value})}
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2"
+                    placeholder="e.g., 10.1234/grit.2025.001"
+                  />
+                </div>
+                {/* Title Field */}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400">Title</label>
                   <input type="text" value={pubForm.title} onChange={(e) => { setPubForm({...pubForm, title: e.target.value}); validatePublicationForm(e.target.value); }} required className={`w-full bg-slate-950 border rounded-xl px-4 py-2 ${pubErrors.title ? 'border-red-500' : 'border-slate-800'}`} />
@@ -656,24 +701,15 @@ export default function App() {
                   <div><label className="block text-xs font-bold uppercase text-slate-400">Type</label><select value={pubForm.publication_type} onChange={e => setPubForm({...pubForm, publication_type: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2"><option>Book</option><option>Journal Article</option><option>Research Paper</option><option>Report</option></select></div>
                   <div><label className="block text-xs font-bold uppercase text-slate-400">Date</label><input type="date" value={pubForm.publication_date} onChange={e => setPubForm({...pubForm, publication_date: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2" /></div>
                 </div>
-                {/* NEW: PDF file upload field */}
+                {/* PDF file upload */}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400">PDF Document (Full Text)</label>
                   <div className="relative h-10 bg-slate-950 border border-slate-800 rounded-xl flex items-center px-3">
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      onChange={handlePublicationFileUpload}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    <span className="text-sm text-slate-300">
-                      {pubForm.pdf_url ? '✓ PDF Attached' : '📁 Upload PDF'}
-                    </span>
+                    <input type="file" accept="application/pdf" onChange={handlePublicationFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    <span className="text-sm text-slate-300">{pubForm.pdf_url ? '✓ PDF Attached' : '📁 Upload PDF'}</span>
                     {uploadingImage && <span className="ml-2 text-indigo-400 text-xs">Syncing...</span>}
                   </div>
-                  {pubForm.pdf_url && (
-                    <p className="text-[10px] text-emerald-400 mt-1 break-all">Linked: {pubForm.pdf_url.substring(0, 60)}...</p>
-                  )}
+                  {pubForm.pdf_url && <p className="text-[10px] text-emerald-400 mt-1 break-all">Linked: {pubForm.pdf_url.substring(0, 60)}...</p>}
                 </div>
                 {/* Authors dropdown (unchanged) */}
                 <div className="space-y-4 bg-slate-950/30 p-4 rounded-xl border border-slate-800/60">

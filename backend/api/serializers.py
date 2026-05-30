@@ -31,9 +31,11 @@ class PublicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Publication
         fields = [
-            'id', 'title', 'publication_type', 'publication_date', 
+            'id', 'doi', 'title', 'publication_type', 'publication_date', 
             'price', 'description', 'abstract', 
             'authors', 'publisher',               
             'author_details', 'publisher_details',
             'pdf_url' 
         ]
+        
+        read_only_fields = ['id']

@@ -24,6 +24,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
 class PublicationViewSet(viewsets.ModelViewSet):
     queryset = Publication.objects.all()
     serializer_class = PublicationSerializer
+    lookup_field = 'doi'  # Use DOI for lookups instead of the default 'id'
 
 # ==============================================================
 # CUSTOM UTILITY ENDPOINTS LAYER

@@ -39,7 +39,14 @@ class Publication(models.Model):
     description = models.TextField(blank=True, null=True)
     abstract = models.TextField(blank=True, null=True)
     pdf_url = models.URLField(max_length=500, blank=True, null=True) 
-    
+    doi = models.CharField(
+        max_length=255, 
+        unique=True, 
+        db_index=True,
+        blank=False, 
+        null=False,
+        help_text="Digital Object Identifier (e.g., 10.1234/grit.2025.001)"
+    )
     
     publisher = models.ForeignKey(Publisher, on_delete=models.RESTRICT, related_name='publications')
     authors = models.ManyToManyField(Author, related_name='publications')
