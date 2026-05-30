@@ -43,7 +43,7 @@ Step-by-step instructions to get the project running locally:
 
 ```bash
 # 1. Clone the repository
-git clone <your-repository-url>
+git clone (https://github.com/KINGSTING/lumingkit-grit-dev-hiring)
 
 # 2. Navigate to the project directory
 cd grit-dev-hiring
