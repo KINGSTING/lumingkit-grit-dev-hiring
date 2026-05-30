@@ -39,7 +39,8 @@ export default function App() {
     description: '',
     abstract: '',
     authors: [],
-    publisher: ''
+    publisher: '',
+    pdf_url: ''        // <-- NEW: store Cloudinary URL of the PDF
   });
   const [authForm, setAuthForm] = useState({
     first_name: '',
@@ -80,7 +81,7 @@ export default function App() {
   };
 
   // ==============================================================
-  // CLOUDINARY UPLOAD
+  // CLOUDINARY UPLOAD (images + PDF)
   // ==============================================================
   const handleImageUpload = async (e, targetType) => {
     const file = e.target.files[0];
@@ -106,6 +107,38 @@ export default function App() {
       }
     } catch (err) {
       console.error('Upload failed:', err);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // NEW: handle PDF upload for publications
+  const handlePublicationFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      alert('Only PDF files are allowed.');
+      return;
+    }
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('target', 'publication');   // store in grithub_archive/publications/
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/upload/`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPubForm(prev => ({ ...prev, pdf_url: data.secure_url }));
+      } else {
+        console.error('PDF upload failed');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
     } finally {
       setUploadingImage(false);
     }
@@ -222,7 +255,8 @@ export default function App() {
         setPubForm({
           ...existingRecord,
           authors: authorIds,
-          publisher: existingRecord.publisher_details?.id || existingRecord.publisher
+          publisher: existingRecord.publisher_details?.id || existingRecord.publisher,
+          pdf_url: existingRecord.pdf_url || ''    // <-- load existing PDF URL
         });
         setAuthorInputValues(textValues.length ? textValues : ['']);
       }
@@ -242,7 +276,8 @@ export default function App() {
         description: '',
         abstract: '',
         authors: [],
-        publisher: publishers[0]?.id || ''
+        publisher: publishers[0]?.id || '',
+        pdf_url: ''
       });
       setAuthorInputValues(['']);
       setAuthForm({ first_name: '', last_name: '', short_bionote: '', image_url: '' });
@@ -455,10 +490,10 @@ export default function App() {
       </main>
 
       {/* ==============================================================
-          DETAILED VIEW MODALS (Publicaton, Author, Publisher)
+          DETAILED VIEW MODALS (Publication, Author, Publisher)
          ============================================================== */}
 
-      {/* ----- Publication Detail Modal ----- */}
+      {/* ----- Publication Detail Modal (with PDF download link) ----- */}
       {selectedViewPub && (() => {
         const corporateInitials = (selectedViewPub.publisher_details?.name || 'P')
           .split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase();
@@ -485,6 +520,19 @@ export default function App() {
                   <div className="p-4 rounded-xl bg-slate-950/60">
                     <div className="text-xs font-bold text-slate-500">Publisher</div>
                     <div className="mt-2 text-sm">🏢 {selectedViewPub.publisher_details?.name}</div>
+                    {/* NEW: PDF download link inside publisher box */}
+                    {selectedViewPub.pdf_url && (
+                      <div className="mt-3 pt-2 border-t border-slate-700/50">
+                        <a
+                          href={selectedViewPub.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition"
+                        >
+                          📄 Download PDF
+                        </a>
+                      </div>
+                    )}
                     <div className="mt-4 text-xs">📅 {selectedViewPub.publication_date} &nbsp;|&nbsp; 🆔 #{selectedViewPub.id}</div>
                   </div>
                 </div>
@@ -499,7 +547,7 @@ export default function App() {
         );
       })()}
 
-      {/* ----- Author Detail Modal ----- */}
+      {/* ----- Author Detail Modal (unchanged) ----- */}
       {selectedViewAuth && (() => {
         const authorPubs = publications.filter(p => p.author_details?.some(a => a.id === selectedViewAuth.id));
         return (
@@ -541,7 +589,7 @@ export default function App() {
         );
       })()}
 
-      {/* ----- Publisher Detail Modal ----- */}
+      {/* ----- Publisher Detail Modal (unchanged) ----- */}
       {selectedViewPubl && (() => {
         const publisherPubs = publications.filter(p => p.publisher_details?.id === selectedViewPubl.id || p.publisher === selectedViewPubl.id);
         const initials = selectedViewPubl.name.split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase();
@@ -589,7 +637,7 @@ export default function App() {
           FORM MODALS (Create/Edit with duplicate validation)
          ============================================================== */}
 
-      {/* Publication Form Modal */}
+      {/* Publication Form Modal (with PDF upload) */}
       {modalType === 'publication' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col">
@@ -608,7 +656,26 @@ export default function App() {
                   <div><label className="block text-xs font-bold uppercase text-slate-400">Type</label><select value={pubForm.publication_type} onChange={e => setPubForm({...pubForm, publication_type: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2"><option>Book</option><option>Journal Article</option><option>Research Paper</option><option>Report</option></select></div>
                   <div><label className="block text-xs font-bold uppercase text-slate-400">Date</label><input type="date" value={pubForm.publication_date} onChange={e => setPubForm({...pubForm, publication_date: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2" /></div>
                 </div>
-                {/* Authors dropdown (identical to original, but kept clean) */}
+                {/* NEW: PDF file upload field */}
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400">PDF Document (Full Text)</label>
+                  <div className="relative h-10 bg-slate-950 border border-slate-800 rounded-xl flex items-center px-3">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePublicationFileUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <span className="text-sm text-slate-300">
+                      {pubForm.pdf_url ? '✓ PDF Attached' : '📁 Upload PDF'}
+                    </span>
+                    {uploadingImage && <span className="ml-2 text-indigo-400 text-xs">Syncing...</span>}
+                  </div>
+                  {pubForm.pdf_url && (
+                    <p className="text-[10px] text-emerald-400 mt-1 break-all">Linked: {pubForm.pdf_url.substring(0, 60)}...</p>
+                  )}
+                </div>
+                {/* Authors dropdown (unchanged) */}
                 <div className="space-y-4 bg-slate-950/30 p-4 rounded-xl border border-slate-800/60">
                   <label className="block text-xs font-bold uppercase text-slate-400">Author(s)</label>
                   {authorInputValues.map((val, idx) => {
@@ -651,7 +718,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Author Form Modal */}
+      {/* Author Form Modal (unchanged) */}
       {modalType === 'author' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full">
@@ -676,7 +743,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Publisher Form Modal */}
+      {/* Publisher Form Modal (unchanged) */}
       {modalType === 'publisher' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full">

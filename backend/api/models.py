@@ -38,6 +38,8 @@ class Publication(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     description = models.TextField(blank=True, null=True)
     abstract = models.TextField(blank=True, null=True)
+    pdf_url = models.URLField(max_length=500, blank=True, null=True) 
+    
     
     publisher = models.ForeignKey(Publisher, on_delete=models.RESTRICT, related_name='publications')
     authors = models.ManyToManyField(Author, related_name='publications')

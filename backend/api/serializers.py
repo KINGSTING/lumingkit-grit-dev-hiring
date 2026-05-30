@@ -34,5 +34,6 @@ class PublicationSerializer(serializers.ModelSerializer):
             'id', 'title', 'publication_type', 'publication_date', 
             'price', 'description', 'abstract', 
             'authors', 'publisher',               
-            'author_details', 'publisher_details' 
+            'author_details', 'publisher_details',
+            'pdf_url' 
         ]
