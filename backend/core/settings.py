@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',   # <-- staticfiles app is present
     'rest_framework',
     'corsheaders',
+    'django_filters',
     'api',                           # your app name
 ]
 
@@ -94,3 +95,12 @@ cloudinary.config(
     api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
     secure=True
 )
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.CustomPageNumberPagination',
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+}

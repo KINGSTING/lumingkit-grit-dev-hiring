@@ -3,3 +3,4 @@ djangorestframework
 django-cors-headers
 mysqlclient
 cloudinary==1.36.0
+django-filter

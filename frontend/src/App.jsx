@@ -16,10 +16,17 @@ export default function App() {
   // Search
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [nextPage, setNextPage] = useState(null);
+  const [previousPage, setPreviousPage] = useState(null);
+
   // Modal controllers
-  const [modalType, setModalType] = useState(null); // 'publication', 'author', 'publisher'
-  const [editId, setEditId] = useState(null); // still store id internally
-  const [editDoi, setEditDoi] = useState(null); // store doi for edit/delete
+  const [modalType, setModalType] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [editDoi, setEditDoi] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Detailed view modals
@@ -33,7 +40,7 @@ export default function App() {
 
   // Form states
   const [pubForm, setPubForm] = useState({
-    doi: '',                    // DOI still stored
+    doi: '',
     title: '',
     publication_type: 'Journal Article',
     publication_date: '',
@@ -58,29 +65,53 @@ export default function App() {
   const [publErrors, setPublErrors] = useState({ name: '' });
 
   // ==============================================================
-  // DATA FETCHING
+  // DATA FETCHING (with pagination & server‑side search)
   // ==============================================================
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  const fetchAllData = async () => {
+  const fetchAllData = async (page = currentPage, size = pageSize) => {
     setLoading(true);
     try {
-      const [pubRes, authRes, publRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/publications/`),
-        fetch(`${API_BASE_URL}/authors/`),
-        fetch(`${API_BASE_URL}/publishers/`)
-      ]);
-      setPublications(await pubRes.json());
-      setAuthors(await authRes.json());
-      setPublishers(await publRes.json());
+      let url = '';
+      if (activeTab === 'publications') {
+        url = `${API_BASE_URL}/publications/?page=${page}&page_size=${size}`;
+      } else if (activeTab === 'authors') {
+        url = `${API_BASE_URL}/authors/?page=${page}&page_size=${size}`;
+      } else {
+        url = `${API_BASE_URL}/publishers/?page=${page}&page_size=${size}`;
+      }
+      if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (activeTab === 'publications') {
+        setPublications(data.results);
+        setTotalCount(data.count);
+        setNextPage(data.next);
+        setPreviousPage(data.previous);
+      } else if (activeTab === 'authors') {
+        setAuthors(data.results);
+        setTotalCount(data.count);
+        setNextPage(data.next);
+        setPreviousPage(data.previous);
+      } else {
+        setPublishers(data.results);
+        setTotalCount(data.count);
+        setNextPage(data.next);
+        setPreviousPage(data.previous);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Re‑fetch when tab, page, pageSize, or searchQuery changes
+  useEffect(() => {
+    fetchAllData(currentPage, pageSize);
+  }, [activeTab, currentPage, pageSize, searchQuery]);
 
   // ==============================================================
   // CLOUDINARY UPLOAD (images + PDF)
@@ -114,7 +145,6 @@ export default function App() {
     }
   };
 
-  // PDF upload for publications
   const handlePublicationFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -136,8 +166,6 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setPubForm(prev => ({ ...prev, pdf_url: data.secure_url }));
-      } else {
-        console.error('PDF upload failed');
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -147,7 +175,7 @@ export default function App() {
   };
 
   // ==============================================================
-  // DUPLICATE VALIDATION HELPERS
+  // DUPLICATE VALIDATION HELPERS (remain client‑side)
   // ==============================================================
   const isAuthorDuplicate = (firstName, lastName, excludeId = null) => {
     return authors.some(
@@ -194,65 +222,18 @@ export default function App() {
   };
 
   // ==============================================================
-  // SEARCH FILTER
-  // ==============================================================
-  const getFilteredData = () => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) {
-      if (activeTab === 'publications') return publications;
-      if (activeTab === 'authors') return authors;
-      if (activeTab === 'publishers') return publishers;
-    }
-
-    if (activeTab === 'publications') {
-      return publications.filter(pub => {
-        const titleMatch = pub.title?.toLowerCase().includes(query);
-        const typeMatch = pub.publication_type?.toLowerCase().includes(query);
-        const priceMatch = pub.price ? parseFloat(pub.price).toFixed(2).includes(query) : false;
-        const authorMatch = pub.author_details?.some(auth =>
-          `${auth.first_name || ''} ${auth.last_name || ''}`.toLowerCase().includes(query)
-        );
-        const publisherMatch = pub.publisher_details?.name?.toLowerCase().includes(query);
-        const doiMatch = pub.doi?.toLowerCase().includes(query); // still searchable but not displayed
-        return titleMatch || typeMatch || priceMatch || authorMatch || publisherMatch || doiMatch;
-      });
-    }
-
-    if (activeTab === 'authors') {
-      return authors.filter(auth => {
-        const nameMatch = `${auth.first_name || ''} ${auth.last_name || ''}`.toLowerCase().includes(query);
-        const idMatch = auth.id ? `#${auth.id}`.includes(query) || auth.id.toString() === query : false;
-        const bioMatch = auth.short_bionote?.toLowerCase().includes(query);
-        return nameMatch || idMatch || bioMatch;
-      });
-    }
-
-    if (activeTab === 'publishers') {
-      return publishers.filter(publ => {
-        const nameMatch = publ.name?.toLowerCase().includes(query);
-        const idMatch = publ.id ? `#${publ.id}`.includes(query) || publ.id.toString() === query : false;
-        return nameMatch || idMatch;
-      });
-    }
-    return [];
-  };
-
-  const filteredItems = getFilteredData();
-
-  // ==============================================================
   // MODAL CONTROLS
   // ==============================================================
   const openModal = (type, existingRecord = null) => {
     setModalType(type);
     setActiveDropdownIndex(null);
-    // Reset errors
     setPubErrors({ title: '' });
     setAuthErrors({ first_name: '', last_name: '' });
     setPublErrors({ name: '' });
 
     if (existingRecord) {
       setEditId(existingRecord.id);
-      setEditDoi(existingRecord.doi);   // store DOI for URL construction
+      setEditDoi(existingRecord.doi);
       if (type === 'publication') {
         const authorIds = existingRecord.author_details?.map(a => a.id) || [];
         const textValues = existingRecord.author_details?.map(a => `${a.first_name || ''} ${a.last_name || ''}`) || [];
@@ -305,7 +286,6 @@ export default function App() {
     }
 
     const method = editId ? 'PUT' : 'POST';
-    // Use DOI instead of id for publications
     let url;
     if (endpoint === 'publications') {
       url = editId ? `${API_BASE_URL}/${endpoint}/${editDoi}/` : `${API_BASE_URL}/${endpoint}/`;
@@ -321,7 +301,9 @@ export default function App() {
       });
       if (res.ok) {
         setModalType(null);
-        fetchAllData();
+        // After successful create/edit, reset to page 1 and refetch
+        setCurrentPage(1);
+        fetchAllData(1, pageSize);
       } else {
         const errorData = await res.json();
         console.error('Backend error:', errorData);
@@ -341,7 +323,10 @@ export default function App() {
         url = `${API_BASE_URL}/${endpoint}/${id}/`;
       }
       const res = await fetch(url, { method: 'DELETE' });
-      if (res.ok) fetchAllData();
+      if (res.ok) {
+        // After deletion, stay on same page but refetch (page may become empty)
+        fetchAllData(currentPage, pageSize);
+      }
     } catch (err) {
       console.error('Delete failed:', err);
     }
@@ -364,9 +349,12 @@ export default function App() {
   // ==============================================================
   // RENDER
   // ==============================================================
+  // Determine which data array to display based on activeTab
+  const currentItems = activeTab === 'publications' ? publications : activeTab === 'authors' ? authors : publishers;
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-900 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
-      {/* ----- HEADER ----- */}
+      {/* ----- HEADER (unchanged) ----- */}
       <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40 shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -401,7 +389,7 @@ export default function App() {
         {/* Stats cards */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between">
-            <div><p className="text-xs uppercase text-slate-500">Total Publications</p><h3 className="text-3xl font-bold">{publications.length}</h3></div>
+            <div><p className="text-xs uppercase text-slate-500">Total Publications</p><h3 className="text-3xl font-bold">{totalCount}</h3></div>
             <div className="text-indigo-400 text-2xl">📚</div>
           </div>
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between">
@@ -418,15 +406,36 @@ export default function App() {
         <div className="flex flex-col sm:flex-row gap-4 justify-between bg-slate-950 p-3 rounded-2xl border border-slate-800">
           <div className="flex border border-slate-800 p-1 bg-slate-900 rounded-xl">
             {['publications', 'authors', 'publishers'].map(tab => (
-              <button key={tab} onClick={() => { setActiveTab(tab); setSearchQuery(''); }} className={`px-5 py-2 text-xs font-semibold capitalize rounded-lg ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-400'}`}>
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className={`px-5 py-2 text-xs font-semibold capitalize rounded-lg ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-400'}`}
+              >
                 {tab}
               </button>
             ))}
           </div>
           <div className="relative flex-1 sm:max-w-md">
             <span className="absolute left-3 top-2 text-slate-500">🔍</span>
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={`Search ${activeTab}...`} className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-10 py-2 text-sm" />
-            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2 text-slate-400">&times;</button>}
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder={`Search ${activeTab}...`}
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-10 py-2 text-sm"
+            />
+            {searchQuery && (
+              <button onClick={() => { setSearchQuery(''); setCurrentPage(1); }} className="absolute right-3 top-2 text-slate-400">
+                &times;
+              </button>
+            )}
           </div>
         </div>
 
@@ -449,7 +458,7 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map(pub => (
+                    {currentItems.map(pub => (
                       <tr key={pub.id} onClick={() => setSelectedViewPub(pub)} className="hover:bg-slate-900/60 cursor-pointer">
                         <td className="p-4 font-semibold">{pub.title}</td>
                         <td className="p-4"><span className="px-2 py-0.5 rounded-md text-xs bg-slate-800">{pub.publication_type}</span></td>
@@ -465,7 +474,7 @@ export default function App() {
                         </td>
                       </tr>
                     ))}
-                    {filteredItems.length === 0 && (
+                    {currentItems.length === 0 && (
                       <tr><td colSpan="6" className="text-center py-12 text-xs text-slate-500">No publications found.</td></tr>
                     )}
                   </tbody>
@@ -478,7 +487,7 @@ export default function App() {
                     <tr><th className="p-4">ID</th><th>Name</th><th>Bio</th><th className="text-right">Actions</th></tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map(auth => (
+                    {currentItems.map(auth => (
                       <tr key={auth.id} onClick={() => setSelectedViewAuth(auth)} className="hover:bg-slate-900/60 cursor-pointer">
                         <td className="p-4 font-mono text-xs">#{auth.id}</td>
                         <td className="font-semibold">{auth.last_name}, {auth.first_name}</td>
@@ -499,7 +508,7 @@ export default function App() {
                     <tr><th className="p-4">ID</th><th>Name</th><th className="text-right">Actions</th></tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map(publ => (
+                    {currentItems.map(publ => (
                       <tr key={publ.id} onClick={() => setSelectedViewPubl(publ)} className="hover:bg-slate-900/60 cursor-pointer">
                         <td className="p-4 font-mono text-xs">#{publ.id}</td>
                         <td className="font-semibold">{publ.name}</td>
@@ -512,6 +521,47 @@ export default function App() {
                   </tbody>
                 </table>
               )}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {!loading && totalCount > 0 && (
+            <div className="flex justify-between items-center p-4 border-t border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">Items per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+                <span className="text-xs text-slate-400 ml-4">
+                  Showing {(currentPage - 1) * pageSize + 1} – {Math.min(currentPage * pageSize, totalCount)} of {totalCount}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  disabled={!previousPage}
+                  className="px-3 py-1 bg-slate-800 rounded-lg text-xs disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={!nextPage}
+                  className="px-3 py-1 bg-slate-800 rounded-lg text-xs disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -548,19 +598,15 @@ export default function App() {
                   <div className="p-4 rounded-xl bg-slate-950/60">
                     <div className="text-xs font-bold text-slate-500">Publisher</div>
                     <div className="mt-2 text-sm">🏢 {selectedViewPub.publisher_details?.name}</div>
-                    {/* PDF download link */}
                     {selectedViewPub.pdf_url && (
                       <div className="mt-3 pt-2 border-t border-slate-700/50">
                         <a href={selectedViewPub.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition">📄 Download PDF</a>
                       </div>
                     )}
-                    {/* DOI display with link */}
                     <div className="mt-3 pt-2 border-t border-slate-700/50">
                       <div className="text-xs font-bold text-slate-500">DOI</div>
                       {selectedViewPub.doi ? (
-                        <a href={`https://doi.org/${selectedViewPub.doi}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline break-all">
-                          {selectedViewPub.doi}
-                        </a>
+                        <a href={`https://doi.org/${selectedViewPub.doi}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline break-all">{selectedViewPub.doi}</a>
                       ) : (
                         <span className="text-xs text-slate-500">Not assigned</span>
                       )}
@@ -666,7 +712,7 @@ export default function App() {
       })()}
 
       {/* ==============================================================
-          FORM MODALS
+          FORM MODALS (Create/Edit)
          ============================================================== */}
 
       {/* Publication Form Modal (with DOI and PDF upload) */}
@@ -679,19 +725,10 @@ export default function App() {
             </div>
             <form onSubmit={(e) => handleFormSubmit(e, 'publications', pubForm)} className="flex-1 overflow-auto">
               <div className="p-6 space-y-4">
-                {/* DOI Field */}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400">DOI (Digital Object Identifier)</label>
-                  <input
-                    type="text"
-                    value={pubForm.doi || ''}
-                    onChange={(e) => setPubForm({...pubForm, doi: e.target.value})}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2"
-                    placeholder="e.g., 10.1234/grit.2025.001"
-                  />
+                  <input type="text" value={pubForm.doi || ''} onChange={(e) => setPubForm({...pubForm, doi: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2" placeholder="e.g., 10.1234/grit.2025.001" />
                 </div>
-                {/* Title Field */}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400">Title</label>
                   <input type="text" value={pubForm.title} onChange={(e) => { setPubForm({...pubForm, title: e.target.value}); validatePublicationForm(e.target.value); }} required className={`w-full bg-slate-950 border rounded-xl px-4 py-2 ${pubErrors.title ? 'border-red-500' : 'border-slate-800'}`} />
@@ -701,7 +738,6 @@ export default function App() {
                   <div><label className="block text-xs font-bold uppercase text-slate-400">Type</label><select value={pubForm.publication_type} onChange={e => setPubForm({...pubForm, publication_type: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2"><option>Book</option><option>Journal Article</option><option>Research Paper</option><option>Report</option></select></div>
                   <div><label className="block text-xs font-bold uppercase text-slate-400">Date</label><input type="date" value={pubForm.publication_date} onChange={e => setPubForm({...pubForm, publication_date: e.target.value})} required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2" /></div>
                 </div>
-                {/* PDF file upload */}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400">PDF Document (Full Text)</label>
                   <div className="relative h-10 bg-slate-950 border border-slate-800 rounded-xl flex items-center px-3">

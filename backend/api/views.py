@@ -2,6 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 import cloudinary.uploader
 import traceback
 
@@ -9,22 +11,32 @@ from .models import Publisher, Author, Publication
 from .serializers import PublisherSerializer, AuthorSerializer, PublicationSerializer
 
 # ==============================================================
-# STANDARD CRUD VIEWSETS LAYER
+# STANDARD CRUD VIEWSETS LAYER (with filtering & ordering)
 # ==============================================================
-
-class PublisherViewSet(viewsets.ModelViewSet):
-    # FIXED: Removed the invalid 'a' argument
-    queryset = Publisher.objects.all() 
-    serializer_class = PublisherSerializer
-
-class AuthorViewSet(viewsets.ModelViewSet):
-    queryset = Author.objects.all()
-    serializer_class = AuthorSerializer
 
 class PublicationViewSet(viewsets.ModelViewSet):
     queryset = Publication.objects.all()
     serializer_class = PublicationSerializer
-    lookup_field = 'doi'  # Use DOI for lookups instead of the default 'id'
+    lookup_field = 'doi'
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['publication_type', 'publisher__name']
+    search_fields = ['title', 'doi', 'abstract', 'description']
+    ordering_fields = ['publication_date', 'price', 'title']
+    ordering = ['-publication_date']
+
+class AuthorViewSet(viewsets.ModelViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['first_name', 'last_name', 'short_bionote']
+    ordering_fields = ['last_name', 'first_name']
+
+class PublisherViewSet(viewsets.ModelViewSet):
+    queryset = Publisher.objects.all()
+    serializer_class = PublisherSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name']
 
 # ==============================================================
 # CUSTOM UTILITY ENDPOINTS LAYER
