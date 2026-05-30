@@ -63,6 +63,7 @@ sudo docker compose exec backend python manage.py migrate
 # 6. Access the application
 # Frontend: http://localhost:5173
 # API: http://localhost:8000/api/
+```
 
 ## 📖 Project Documentation
 
