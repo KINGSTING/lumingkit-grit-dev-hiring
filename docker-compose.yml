@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. MySQL Relational Storage Core
   db:
@@ -13,27 +11,36 @@ services:
       - "3306:3306"
     volumes:
       - mysql_persistent_data:/var/lib/mysql
-      # Automatically initializes your 3NF tables on first container boot
       - ./database/database.sql:/docker-entrypoint-initdb.d/database.sql
     networks:
       - grit_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 5
 
   # 2. Django REST Framework Engine
   backend:
     build: ./backend
     container_name: grit_django_api
     restart: always
+    # FORCE the server to bind to 0.0.0.0:8000
     command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
+    env_file: .env
     environment:
       DB_HOST: db
       DB_NAME: grit_archive
       DB_USER: root
       DB_PASSWORD: rootpassword
       DB_PORT: 3306
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - grit_network
 

@@ -65,7 +65,6 @@ export default function App() {
     uploadData.append('target', targetType);
 
     try {
-      // FIX: Added the absolute trailing slash to eliminate OPTIONS redirect drops
       const res = await fetch(`${API_BASE_URL}/upload/`, {
         method: 'POST',
         body: uploadData,
@@ -103,10 +102,10 @@ export default function App() {
       return publications.filter((pub) => {
         const titleMatch = pub.title?.toLowerCase().includes(query);
         const typeMatch = pub.publication_type?.toLowerCase().includes(query);
-        const priceMatch = parseFloat(pub.price).toFixed(2).includes(query);
+        const priceMatch = pub.price ? parseFloat(pub.price).toFixed(2).includes(query) : false;
         
         const authorMatch = pub.author_details?.some(auth => 
-          `${auth.first_name} ${auth.last_name}`.toLowerCase().includes(query)
+          `${auth.first_name || ''} ${auth.last_name || ''}`.toLowerCase().includes(query)
         );
         const publisherMatch = pub.publisher_details?.name?.toLowerCase().includes(query);
 
@@ -116,8 +115,8 @@ export default function App() {
 
     if (activeTab === 'authors') {
       return authors.filter((auth) => {
-        const nameMatch = `${auth.first_name} ${auth.last_name}`.toLowerCase().includes(query);
-        const idMatch = `#${auth.id}`.includes(query) || auth.id.toString() === query;
+        const nameMatch = `${auth.first_name || ''} ${auth.last_name || ''}`.toLowerCase().includes(query);
+        const idMatch = auth.id ? `#${auth.id}`.includes(query) || auth.id.toString() === query : false;
         const bioMatch = auth.short_bionote?.toLowerCase().includes(query);
         return nameMatch || idMatch || bioMatch;
       });
@@ -126,7 +125,7 @@ export default function App() {
     if (activeTab === 'publishers') {
       return publishers.filter((publ) => {
         const nameMatch = publ.name?.toLowerCase().includes(query);
-        const idMatch = `#${publ.id}`.includes(query) || publ.id.toString() === query;
+        const idMatch = publ.id ? `#${publ.id}`.includes(query) || publ.id.toString() === query : false;
         return nameMatch || idMatch;
       });
     }
@@ -143,7 +142,7 @@ export default function App() {
       setEditId(existingRecord.id);
       if (type === 'publication') {
         const authorIds = existingRecord.author_details?.map(a => a.id) || [];
-        const textValues = existingRecord.author_details?.map(a => `${a.first_name} ${a.last_name}`) || [];
+        const textValues = existingRecord.author_details?.map(a => `${a.first_name || ''} ${a.last_name || ''}`) || [];
         setPubForm({ 
           ...existingRecord, 
           authors: authorIds,
@@ -237,7 +236,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Block: Actions Menu with Hint Indicator Matrix */}
           <div className="flex items-center gap-4">
             <div className={`flex items-center gap-2 transition-all duration-300 ease-out transform ${
               menuOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-12 opacity-0 pointer-events-none'
@@ -275,7 +273,6 @@ export default function App() {
 
       {/* Main Content Area Container Block */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-        {/* System Metrics Analytics Card Blocks */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
             <div>
@@ -384,10 +381,10 @@ export default function App() {
 
                           <td className="p-4 text-slate-400">{pub.publisher_details?.name || 'N/A'}</td>
                           <td className="p-4 font-mono font-semibold">
-                            {parseFloat(pub.price) === 0 ? (
+                            {pub.price && parseFloat(pub.price) === 0 ? (
                               <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">Free</span>
                             ) : (
-                              <span className="text-emerald-400">₱{parseFloat(pub.price).toFixed(2)}</span>
+                              <span className="text-emerald-400">₱{pub.price ? parseFloat(pub.price).toFixed(2) : '0.00'}</span>
                             )}
                           </td>
                           
@@ -469,19 +466,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Footer Component Modular Layer */}
-      <footer className="border-t border-slate-800 bg-slate-950/40 backdrop-blur py-6 text-xs text-slate-500 shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="font-medium tracking-wide">
-            &copy; 2026 GRIT Hub Archive. All rights reserved.
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            <a href="https://ncpag.upd.edu.ph" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 font-semibold transition-colors duration-150 underline decoration-slate-700 hover:decoration-indigo-400/40 underline-offset-4">UP NCPAG Portal</a>
-            <a href="https://www.facebook.com/UPNCPAGGRITLabs" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 font-semibold transition-colors duration-150 underline decoration-slate-700 hover:decoration-indigo-400/40 underline-offset-4">GRIT Labs Community</a>
-          </div>
-        </div>
-      </footer>
-
       {/* ==============================================================
           MODAL INTERACTIVE VIEW OVERLAY RENDERING TREE
          ============================================================== */}
@@ -501,7 +485,6 @@ export default function App() {
               
               <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-start bg-slate-950/40 gap-4">
                 <div className="flex items-center gap-4">
-                  {/* Pulls Cover image directly from parent publisher elements to preserve 3NF constraints */}
                   {selectedViewPub.publisher_details?.image_url ? (
                     <img src={selectedViewPub.publisher_details.image_url} alt={selectedViewPub.title} className="h-16 w-24 rounded-xl object-cover shadow-lg border border-slate-700 shrink-0" />
                   ) : (
@@ -565,7 +548,7 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-400">Price:</span>
                   <span className="font-mono text-base font-bold">
-                    {parseFloat(selectedViewPub.price) === 0 ? <span className="text-emerald-400 uppercase text-sm tracking-wider">Free</span> : <span className="text-emerald-400">₱{parseFloat(selectedViewPub.price).toFixed(2)}</span>}
+                    {selectedViewPub.price && parseFloat(selectedViewPub.price) === 0 ? <span className="text-emerald-400 uppercase text-sm tracking-wider">Free</span> : <span className="text-emerald-400">₱{selectedViewPub.price ? parseFloat(selectedViewPub.price).toFixed(2) : '0.00'}</span>}
                   </span>
                 </div>
                 <button onClick={() => setSelectedViewPub(null)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition shadow-md">Close Viewport</button>
@@ -711,7 +694,7 @@ export default function App() {
                         >
                           <div className="min-w-0">
                             <span className="text-sm font-semibold text-slate-200 group-hover:text-amber-400 transition-colors block truncate">📄 {pub.title}</span>
-                            <span className="text-[11px] text-slate-500 block mt-0.5">Release Date: {pub.publication_date || 'N/A'} &bull; Base Price: ₱{parseFloat(pub.price).toFixed(2)}</span>
+                            <span className="text-[11px] text-slate-500 block mt-0.5">Release Date: {pub.publication_date || 'N/A'} &bull; Base Price: ₱{pub.price ? parseFloat(pub.price).toFixed(2) : '0.00'}</span>
                           </div>
                           <span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-800 border border-slate-700/60 font-medium text-slate-400 whitespace-nowrap shrink-0">{pub.publication_type}</span>
                         </div>
@@ -767,8 +750,8 @@ export default function App() {
                 <div className="space-y-4 bg-slate-950/30 p-4 rounded-xl border border-slate-800/60 relative">
                   <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Author/s</label>
                   {authorInputValues.map((textValue, rowIndex) => {
-                    const matchingSuggestions = authors.filter(a => `${a.first_name} ${a.last_name}`.toLowerCase().includes(textValue.toLowerCase()));
-                    const isDbMatchMissing = textValue.trim().length > 0 && !authors.some(a => `${a.first_name} ${a.last_name}`.toLowerCase() === textValue.toLowerCase().trim());
+                    const matchingSuggestions = authors.filter(a => `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase().includes(textValue.toLowerCase()));
+                    const isDbMatchMissing = textValue.trim().length > 0 && !authors.some(a => `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase() === textValue.toLowerCase().trim());
 
                     return (
                       <div key={rowIndex} className="space-y-1 relative">
@@ -788,7 +771,7 @@ export default function App() {
                                 {matchingSuggestions.map(authorObj => (
                                   <div key={authorObj.id} onMouseDown={() => {
                                     const updatedTextValues = [...authorInputValues];
-                                    updatedTextValues[rowIndex] = `${authorObj.first_name} ${authorObj.last_name}`;
+                                    updatedTextValues[rowIndex] = `${authorObj.first_name || ''} ${authorObj.last_name || ''}`;
                                     setAuthorInputValues(updatedTextValues);
                                     const updatedIds = [...(pubForm.authors || [])];
                                     updatedIds[rowIndex] = authorObj.id;

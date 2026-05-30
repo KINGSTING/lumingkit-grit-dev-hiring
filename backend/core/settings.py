@@ -1,37 +1,32 @@
 import os
 from pathlib import Path
 
-# 1. Base Directory Definition
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 2. Security Settings
+# Quick-start development settings - adjust as needed
+SECRET_KEY = 'your-secret-key-here'
 DEBUG = True
-SECRET_KEY = 'django-insecure-grit-evaluation-key-template' # Standard placeholder
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'backend', '0.0.0.0']
+ALLOWED_HOSTS = ['*']  # For development; restrict in production
 
-# 3. Application Definitions
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
-    
-    # Third-Party Components
+    'django.contrib.staticfiles',   # <-- staticfiles app is present
     'rest_framework',
     'corsheaders',
-    
-    # Local Apps
-    'api',
+    'api',                           # your app name
 ]
 
-# 4. Middleware Pipeline
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',   # if you use CORS
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -39,9 +34,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'core.urls'
-WSGI_APPLICATION = 'core.wsgi.application'
 
-# 5. Template Engine Engine Configuration
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -58,24 +51,46 @@ TEMPLATES = [
     },
 ]
 
-# 6. Database Connection Engine (Docker MySQL Link)
+WSGI_APPLICATION = 'core.wsgi.application'
+
+# Database - already configured via environment variables
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'grit_archive'),
-        'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'rootpassword'),
-        'HOST': os.getenv('DB_HOST', 'db'),
-        'PORT': os.getenv('DB_PORT', '3306'),
+        'NAME': os.environ.get('DB_NAME', 'grit_archive'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'rootpassword'),
+        'HOST': os.environ.get('DB_HOST', 'db'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
 
-# 7. CORS Origin Approvals
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
+# Password validation, etc. (keep as default)
 
-# 8. Static Asset Gateways (The Missing Link Fix!)
+# Internationalization
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+# ========== STATIC FILES CONFIGURATION ==========
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')   # for collectstatic
+
+# ========== DEFAULT PRIMARY KEY FIELD ==========
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ========== CORS (for React frontend) ==========
+CORS_ALLOW_ALL_ORIGINS = True   # For development only
+
+# ========== CLOUDINARY CONFIGURATION ==========
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+    secure=True
+)
