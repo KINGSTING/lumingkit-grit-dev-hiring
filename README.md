@@ -2,70 +2,112 @@
 
 ## 💡 Overview
 
-GRIT Hub Archive is a centralized digital repository designed to manage and track institutional publications, academic authors, and publishing entities. The application solves the problem of decentralized document management by enforcing a 3rd Normal Form (3NF) relational database structure, ensuring data integrity and allowing for robust searching, filtering, and media-rich profile management.
+GRIT Hub Archive is a production‑ready, full‑stack web application for managing institutional publications, academic authors, and publishing entities. It solves the problem of decentralized document management by enforcing a **3rd Normal Form (3NF)** relational database structure, providing a robust REST API, and delivering a responsive, modern user interface. The system supports media‑rich profiles, full‑text PDF archiving, persistent identifiers (DOI), role‑based access control, and comprehensive audit logging – all containerised with Docker for **one‑command deployment**.
 
 ## 🚀 Key Features
 
-- **Structured Archiving**: Uses a normalized relational model to manage relationships between publications, their authors, and publishers.
-- **Media Management**: Seamlessly integrates Cloudinary for storage and retrieval of author avatars, publishing house cover graphics, and full‑text PDFs.
-- **Dynamic Search & Filtering**: Server‑side search across titles, authors, publishers, DOI, and abstracts, with pagination and user‑selectable page size.
-- **Omni‑Modal CRUD**: Create, read, update, and delete registry elements through interactive modals.
-- **Authentication & RBAC**: JWT‑based authentication with two roles: **public** (read‑only) and **admin** (full CRUD). Login required for write operations.
-- **Persistent Identifiers**: Each publication gets a unique DOI (Digital Object Identifier) that links to a permanent `doi.org` URL.
-- **Audit Logging**: Every create, update, and delete operation is logged with the user and timestamp (using `django‑auditlog`).
+### Major Features
+
+| Feature | Description |
+|---------|-------------|
+| **Complete CRUD Operations** | Create, read, update, and delete publications, authors, and publishers through an intuitive modal‑based interface. |
+| **JWT Authentication & RBAC** | Secure token‑based authentication with two roles: **public** (read‑only) and **admin** (full CRUD). Login required for write operations. |
+| **Server‑Side Pagination** | Efficient data loading with user‑selectable page size (5/10/25/50 items per page). |
+| **Omni‑Search** | Real‑time, server‑side search across publication titles, abstracts, DOI, author names, and publisher names. |
+| **Cloudinary Media Integration** | Upload author avatars, publisher cover images, and full‑text PDFs. All assets are stored securely in the cloud and delivered via CDN. |
+| **Persistent Identifiers (DOI)** | Each publication receives a unique DOI, which becomes a clickable link to `doi.org` for permanent citability. |
+| **Audit Logging** | Every create, update, and delete operation is automatically logged with the acting user and timestamp. Login events are also logged. |
+| **Real Data Import** | A built‑in scraper fetches real academic publications from the Crossref API, populating the database with authentic data. |
+| **Dockerised Deployment** | Entire stack (MySQL, Django, React) runs in containers. One command starts everything. |
+
+### Minor Features
+
+- **Real‑time duplicate validation** – prevents duplicate author names, publisher names, and publication titles during form submission.
+- **Interactive modals** – all forms and detailed views open in overlays without page reload.
+- **Author autocomplete dropdown** – while creating/editing a publication, you can search existing authors or quickly register a new one.
+- **Responsive design** – works on desktop, tablet, and mobile (Tailwind CSS).
+- **User role display** – the header shows your current role (`admin` or `public`).
+- **Dynamic hint text** – the hamburger menu shows “Click menu to reveal utilities” for admins, or “Login to Access Utilities” for public users.
+- **Persistent search & pagination** – search query and page size survive tab switches.
+- **Automatic token refresh** – the frontend handles expired tokens and prompts for re‑login.
+- **Seed script** – generate 200 sample publications, 30 authors, and 8 publishers (if you prefer synthetic data).
+- **Environment‑ready** – the repository includes a pre‑configured `.env` file with valid Cloudinary credentials for evaluation.
 
 ## 🛠 Tech Stack
 
 | Category      | Technology                                     |
 |---------------|------------------------------------------------|
-| Frontend      | React, Vite, Tailwind CSS, React Hooks        |
-| Backend       | Django, Django REST Framework, Simple JWT     |
+| Frontend      | React 18, Vite, Tailwind CSS, React Hooks     |
+| Backend       | Django 5, Django REST Framework, Simple JWT   |
 | Database      | MySQL 8.0                                      |
 | Media Storage | Cloudinary (images + PDFs)                    |
+| Authentication| JWT (signed, role claim included)             |
+| Logging       | django‑auditlog + custom login signal         |
 | Deployment    | Docker, Docker Compose                        |
 
 ## 🏗 Architecture / Data Flow
 
-The application follows a decoupled client‑server architecture:
+[Browser] ──► React (Vite) ──► Django REST API ──► MySQL
+│ │
+└────────── Cloudinary ──────┘ (media uploads)
 
-1. **Frontend (React)**: Serves as the presentation layer, consuming the API through `fetch` calls. It uses environment‑driven base URLs (`VITE_API_URL`) to communicate with the backend. JWT tokens are stored in `localStorage` and attached to every authenticated request.
-2. **Backend (Django API)**: Acts as the business logic layer. It serializes database models into JSON and exposes RESTful endpoints for CRUD operations. It enforces role‑based permissions using custom permission classes.
-3. **Data Persistence**: MySQL acts as the relational storage engine. The application uses Django migrations to keep the schema in sync. An optional `database.sql` script is provided for initial setup.
-4. **Media Flow**: Images and PDFs uploaded via the React frontend are sent to Cloudinary (via a dedicated Django endpoint) and returned as secure URLs stored in the database. PDF delivery is enabled through Cloudinary’s raw file support.
-5. **Authentication**: JWT tokens are obtained via `/api/token/` (customized to include the user’s role). The token is then used in the `Authorization: Bearer ...` header for all write operations.
+1. **Frontend (React)** – Consumes the API via `fetch`. Stores JWT tokens in `localStorage`. Conditionally shows UI elements based on user role.
+2. **Backend (Django DRF)** – Provides RESTful endpoints for `publications`, `authors`, `publishers`. Uses `ModelViewSet` with custom permissions, pagination, and filtering.
+3. **Database (MySQL)** – Normalised 3NF schema (see ERD). Migrations managed by Django.
+4. **Media Storage** – Uploads are sent directly to a Django endpoint, which forwards them to Cloudinary using your API keys. Returns a secure URL stored in the database.
+5. **Authentication** – Token endpoint (`/api/token/`) returns JWT with a custom `role` claim. Protected endpoints require a valid token.
 
-## ⚙️ Getting Started
+## ⚡ One‑Command Setup
+
+The simplest way to get the application running with **real data** is to use the provided setup script.
 
 ### Prerequisites
 
 - Docker Desktop or Docker Engine + Compose
 - Git
-- Cloudinary account (free tier works)
 
 ### Installation
-
-Step‑by‑step instructions to get the project running locally:
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/KINGSTING/lumingkit-grit-dev-hiring
+cd lumingkit-grit-dev-hiring
 
-# 2. Navigate to the project directory
-cd grit-dev-hiring
+# 2. Make the setup script executable
+chmod +x setup.sh
 
-# 3. Create your .env file with Cloudinary credentials
-# Required variables:
-#   CLOUDINARY_CLOUD_NAME=your_cloud_name
-#   CLOUDINARY_API_KEY=your_api_key
-#   CLOUDINARY_API_SECRET=your_api_secret
+# 3. Run the one‑command installer
+./setup.sh
+```
+The script will automatically:
 
-# 4. Spin up the infrastructure
+- Stop any existing containers and remove the database volume (fresh start)
+- Start the containers (MySQL, Django, React)
+- Run Django migrations
+- Create the admin user (`admin` / `adminpass`)
+- Install the required Python dependencies inside the container
+- Fetch real academic publications from the Crossref API and populate the database
+- Display the frontend URL and login credentials
+
+After the script finishes, open `http://localhost:5173` and log in with:
+
+- **Username:** `admin`
+- **Password:** `adminpass`
+
+> **Note:** The repository already includes a `.env` file with pre‑configured Cloudinary credentials for evaluation. If you prefer to use your own Cloudinary account, replace the values in `.env` before running `./setup.sh`.
+
+## 🧪 Alternative Manual Setup (without the script)
+
+If you prefer to run each step manually, follow the instructions below.
+
+```bash
+# Start containers
 sudo docker compose up -d
 
-# 5. Apply Django migrations (creates all tables)
+# Apply migrations
 sudo docker compose exec backend python manage.py migrate
 
-# 6. (Optional) Create predefined admin user
+# Create admin user
 sudo docker compose exec backend python manage.py shell -c "
 from django.contrib.auth.models import User
 from api.models import UserProfile
@@ -76,41 +118,51 @@ admin.is_staff = True
 admin.is_superuser = True
 admin.save()
 UserProfile.objects.get_or_create(user=admin, defaults={'role': 'admin'})
-print('Admin user created with password: adminpass')
+print('Admin user created')
 "
 
-# 7. (Optional) Seed the database with 200 sample publications
-#    (run after backend is fully running)
-python3 seed.py   # provided in the repository
-
-# 8. Access the application
-#    Frontend: http://localhost:5173
-#    API:      http://localhost:8000/api/
-
+# Run the Crossref scraper to import real data
+sudo docker cp scrape_crossref.py grit_django_api:/app/
+sudo docker compose exec backend pip install requests
+sudo docker compose exec backend python /app/scrape_crossref.py
 ```
-**Default admin credentials** (after step 6):
-- Username: `admin`
-- Password: `adminpass`
 
 ## 📖 Project Documentation
 
-- **API Documentation**: The API is built using Django REST Framework; all endpoints (`/api/publications/`, `/api/authors/`, `/api/publishers/`) are automatically registered via the `DefaultRouter`. Pagination is controlled by `?page=X&page_size=Y`. Search is performed with `?search=term` and works across titles, authors, publishers, DOI, and abstracts.
+### API Endpoints
 
-- **Database Schema**: The system uses a 3NF design with a junction table (`api_publication_authors`) to handle many‑to‑many relationships between publications and authors. The `UserProfile` table extends Django’s `User` model with a `role` field (`admin` or `public`).
+| Endpoint                     | Methods               | Description                          |
+|------------------------------|-----------------------|--------------------------------------|
+| `/api/publications/`         | GET, POST             | List all publications / create new   |
+| `/api/publications/{doi}/`   | GET, PUT, DELETE      | Retrieve, update, delete by DOI     |
+| `/api/authors/`              | GET, POST             | List all authors / create new        |
+| `/api/authors/{id}/`         | GET, PUT, DELETE      | Retrieve, update, delete by ID       |
+| `/api/publishers/`           | GET, POST             | List all publishers / create new     |
+| `/api/publishers/{id}/`      | GET, PUT, DELETE      | Retrieve, update, delete by ID       |
+| `/api/token/`                | POST                  | Obtain JWT (username/password)       |
+| `/api/token/refresh/`        | POST                  | Refresh expired token                |
+| `/api/upload/`               | POST                  | Upload image/PDF to Cloudinary       |
 
-- **Security & RBAC**: JWT authentication with token expiry (1 hour). Only authenticated admin users can create, edit, or delete records. Public users have read‑only access and cannot see the creation buttons.
+**Pagination:** `?page=X&page_size=Y` (default 10, max 100)  
+**Search:** `?search=term` (titles, authors, publishers, DOI, abstracts)  
+**Filtering:** `?publication_type=Book`  
+**Ordering:** `?ordering=-publication_date`
 
-- **Audit Logging**: All changes to `Publication`, `Author`, and `Publisher` models are automatically logged by `django‑auditlog`. Login events are also logged via a custom signal.
+### Database Schema (ERD)
 
-- **Deployment Guide**: Use `sudo docker compose up -d --build` to rebuild images and apply changes. Ensure all environment variables are mapped in `docker-compose.yml`.
+![ERD](database/ERD.png)
 
-## 🤝 Contributing
+The schema is normalised to 3NF with tables: `api_author`, `api_publisher`, `api_publication`, and `api_publication_authors` (junction). A `UserProfile` table extends Django’s `User` with a `role` field (`admin` or `public`).
 
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit your changes (`git commit -m 'Add amazing feature'`).
-4. Push to the branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
+### Security & RBAC
+
+- JWT tokens include a `role` claim.
+- Anonymous users: read‑only.
+- Admin users: full CRUD (enforced by backend permissions and frontend UI).
+
+### Audit Logging
+
+All CREATE, UPDATE, DELETE operations on publications, authors, and publishers are logged with user, timestamp, and changes. Login events are also logged via a custom signal.
 
 ## 📜 License
 
@@ -120,4 +172,4 @@ This project is distributed under the [MIT License](https://opensource.org/licen
 
 - **Name**: Jemar John J. Lumingkit
 - **Project Role**: Lead Developer
-- **Email**: jemarjohn.lumingkit@g.msuiit.edu.ph
+- **Email**: [jemarjohn.lumingkit@g.msuiit.edu.ph](mailto:jemarjohn.lumingkit@g.msuiit.edu.ph)
