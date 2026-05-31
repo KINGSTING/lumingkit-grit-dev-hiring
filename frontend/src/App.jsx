@@ -25,24 +25,39 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);          // filtered total for pagination
   const [nextPage, setNextPage] = useState(null);
   const [previousPage, setPreviousPage] = useState(null);
+
+  // Overall totals (static, not affected by search/filter)
+  const [overallPublications, setOverallPublications] = useState(0);
+  const [overallAuthors, setOverallAuthors] = useState(0);
+  const [overallPublishers, setOverallPublishers] = useState(0);
+
+  // Modal controllers
   const [modalType, setModalType] = useState(null);
   const [editId, setEditId] = useState(null);
   const [editDoi, setEditDoi] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Detailed view modals
   const [selectedViewPub, setSelectedViewPub] = useState(null);
   const [selectedViewAuth, setSelectedViewAuth] = useState(null);
   const [selectedViewPubl, setSelectedViewPubl] = useState(null);
+
+  // Author dropdown helpers
   const [authorInputValues, setAuthorInputValues] = useState(['']);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState(null);
+
+  // Form states
   const [pubForm, setPubForm] = useState({
     doi: '', title: '', publication_type: 'Journal Article', publication_date: '',
     price: '0.00', description: '', abstract: '', authors: [], publisher: '', pdf_url: ''
   });
   const [authForm, setAuthForm] = useState({ first_name: '', last_name: '', short_bionote: '', image_url: '' });
   const [publForm, setPublForm] = useState({ name: '', image_url: '' });
+
+  // Validation error states
   const [pubErrors, setPubErrors] = useState({ title: '' });
   const [authErrors, setAuthErrors] = useState({ first_name: '', last_name: '' });
   const [publErrors, setPublErrors] = useState({ name: '' });
@@ -58,7 +73,29 @@ export default function App() {
   };
 
   // ==============================================================
-  // DATA FETCHING (with token override for login)
+  // FETCH OVERALL TOTALS (unfiltered)
+  // ==============================================================
+  const fetchOverallTotals = async () => {
+    try {
+      const headers = getHeaders(false);
+      const [pubRes, authRes, publRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/publications/?page=1&page_size=1`, { headers }),
+        fetch(`${API_BASE_URL}/authors/?page=1&page_size=1`, { headers }),
+        fetch(`${API_BASE_URL}/publishers/?page=1&page_size=1`, { headers })
+      ]);
+      const pubData = await pubRes.json();
+      const authData = await authRes.json();
+      const publData = await publRes.json();
+      setOverallPublications(pubData.count);
+      setOverallAuthors(authData.count);
+      setOverallPublishers(publData.count);
+    } catch (err) {
+      console.error('Error fetching overall totals:', err);
+    }
+  };
+
+  // ==============================================================
+  // DATA FETCHING (with pagination, search, optional token override)
   // ==============================================================
   const fetchAllData = async (page = currentPage, size = pageSize, tokenOverride = null) => {
     setLoading(true);
@@ -117,6 +154,7 @@ export default function App() {
 
   useEffect(() => {
     fetchAllData(currentPage, pageSize);
+    fetchOverallTotals();
   }, [activeTab, currentPage, pageSize, searchQuery]);
 
   // ==============================================================
@@ -143,6 +181,7 @@ export default function App() {
         setLoginUsername('');
         setLoginPassword('');
         fetchAllData(currentPage, pageSize, data.access);
+        fetchOverallTotals();
       } else {
         setLoginError(data.detail || 'Invalid credentials');
       }
@@ -156,6 +195,7 @@ export default function App() {
     setAccessToken(null);
     setUserRole(null);
     fetchAllData(currentPage, pageSize);
+    fetchOverallTotals();
   };
 
   // ==============================================================
@@ -281,6 +321,7 @@ export default function App() {
         setModalType(null);
         setCurrentPage(1);
         fetchAllData(1, pageSize);
+        fetchOverallTotals();   // update overall counts
       } else {
         const errorData = await res.json();
         console.error('Backend error:', errorData);
@@ -296,7 +337,10 @@ export default function App() {
       if (endpoint === 'publications' && doi) url = `${API_BASE_URL}/${endpoint}/${doi}/`;
       else url = `${API_BASE_URL}/${endpoint}/${id}/`;
       const res = await fetch(url, { method: 'DELETE', headers: getHeaders() });
-      if (res.ok) fetchAllData(currentPage, pageSize);
+      if (res.ok) {
+        fetchAllData(currentPage, pageSize);
+        fetchOverallTotals();   // update overall counts
+      }
     } catch (err) { console.error('Delete failed:', err); }
   };
 
@@ -369,20 +413,20 @@ export default function App() {
         </div>
       </header>
 
-      {/* ----- MAIN CONTENT (unchanged) ----- */}
+      {/* ----- MAIN CONTENT ----- */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-10 space-y-8">
-        {/* Stats cards */}
+        {/* Stats cards – using overall totals, unaffected by search */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between">
-            <div><p className="text-xs uppercase text-slate-500">Total Publications</p><h3 className="text-3xl font-bold">{totalCount}</h3></div>
+            <div><p className="text-xs uppercase text-slate-500">Total Publications</p><h3 className="text-3xl font-bold">{overallPublications}</h3></div>
             <div className="text-indigo-400 text-2xl">📚</div>
           </div>
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between">
-            <div><p className="text-xs uppercase text-slate-500">Registered Authors</p><h3 className="text-3xl font-bold">{authors.length}</h3></div>
+            <div><p className="text-xs uppercase text-slate-500">Registered Authors</p><h3 className="text-3xl font-bold">{overallAuthors}</h3></div>
             <div className="text-emerald-400 text-2xl">✍️</div>
           </div>
           <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between">
-            <div><p className="text-xs uppercase text-slate-500">Publishing Entities</p><h3 className="text-3xl font-bold">{publishers.length}</h3></div>
+            <div><p className="text-xs uppercase text-slate-500">Publishing Entities</p><h3 className="text-3xl font-bold">{overallPublishers}</h3></div>
             <div className="text-amber-400 text-2xl">🏢</div>
           </div>
         </section>
@@ -401,7 +445,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Data tables (unchanged) */}
+        {/* Data tables */}
         <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
           {loading ? <div className="py-20 text-center">Loading...</div> : (
             <div className="p-2 overflow-x-auto">
@@ -465,6 +509,7 @@ export default function App() {
               )}
             </div>
           )}
+          {/* Pagination footer – uses filtered totalCount */}
           {!loading && totalCount > 0 && (
             <div className="flex justify-between items-center p-4 border-t border-slate-800">
               <div className="flex items-center gap-2">
@@ -472,7 +517,9 @@ export default function App() {
                 <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
                   <option value={5}>5</option><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>
                 </select>
-                <span className="text-xs text-slate-400 ml-4">Showing {(currentPage-1)*pageSize+1} – {Math.min(currentPage*pageSize, totalCount)} of {totalCount}</span>
+                <span className="text-xs text-slate-400 ml-4">
+                  Showing {(currentPage-1)*pageSize+1} – {Math.min(currentPage*pageSize, totalCount)} of {totalCount}
+                </span>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setCurrentPage(prev => prev - 1)} disabled={!previousPage} className="px-3 py-1 bg-slate-800 rounded-lg text-xs disabled:opacity-40">Previous</button>
@@ -484,8 +531,9 @@ export default function App() {
       </main>
 
       {/* ==============================================================
-          DETAILED VIEW MODALS (unchanged)
+          DETAILED VIEW MODALS
          ============================================================== */}
+
       {/* Publication Detail Modal */}
       {selectedViewPub && (() => {
         const corporateInitials = (selectedViewPub.publisher_details?.name || 'P')
@@ -627,8 +675,9 @@ export default function App() {
       })()}
 
       {/* ==============================================================
-          FORM MODALS (unchanged)
+          FORM MODALS
          ============================================================== */}
+
       {/* Publication Form Modal */}
       {modalType === 'publication' && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
