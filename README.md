@@ -51,6 +51,7 @@ GRIT Hub Archive is a production‑ready, full‑stack web application for manag
 │ │
 └────────── Cloudinary ──────┘ (media uploads)
 
+
 1. **Frontend (React)** – Consumes the API via `fetch`. Stores JWT tokens in `localStorage`. Conditionally shows UI elements based on user role.
 2. **Backend (Django DRF)** – Provides RESTful endpoints for `publications`, `authors`, `publishers`. Uses `ModelViewSet` with custom permissions, pagination, and filtering.
 3. **Database (MySQL)** – Normalised 3NF schema (see ERD). Migrations managed by Django.
@@ -59,14 +60,26 @@ GRIT Hub Archive is a production‑ready, full‑stack web application for manag
 
 ## ⚡ One‑Command Setup
 
-The simplest way to get the application running with **real data** is to use the provided setup script.
+The simplest way to get the application running with **real data** is to use the provided setup script for your operating system.
 
 ### Prerequisites
 
-- Docker Desktop or Docker Engine + Compose
+- Docker Desktop (Windows / macOS) or Docker Engine (Linux)
 - Git
 
-### Installation
+### Windows (PowerShell)
+
+```powershell
+# 1. Clone the repository
+git clone https://github.com/KINGSTING/lumingkit-grit-dev-hiring
+cd lumingkit-grit-dev-hiring
+
+# 2. Run the setup script
+.\setup.ps1
+```
+> **If you see an execution policy error**, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` first, then run the script again.
+
+### Linux / macOS (Bash)
 
 ```bash
 # 1. Clone the repository
@@ -79,6 +92,7 @@ chmod +x setup.sh
 # 3. Run the one‑command installer
 ./setup.sh
 ```
+
 The script will automatically:
 
 - Stop any existing containers and remove the database volume (fresh start)
