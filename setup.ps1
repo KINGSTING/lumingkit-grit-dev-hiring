@@ -15,14 +15,25 @@ docker compose up -d
 Write-Host "Waiting 15 seconds for database to be ready..." -ForegroundColor Yellow
 Start-Sleep -Seconds 15
 
-# 4. Run Django migrations
-Write-Host "Running database migrations..." -ForegroundColor Yellow
+# 4. Ensure API migrations exist and apply them
+Write-Host "Preparing and running database migrations..." -ForegroundColor Yellow
+
+Write-Host "Checking for existing API migrations..." -ForegroundColor Yellow
+$checkMigrations = docker compose exec backend sh -c "ls -1 api/migrations/ | grep -v '__init__' | wc -l"
+if ($checkMigrations -eq 0) {
+    Write-Host "No API migrations found. Creating initial migration..." -ForegroundColor Yellow
+    docker compose exec backend python manage.py makemigrations api
+} else {
+    Write-Host "API migrations already exist." -ForegroundColor Yellow
+}
+
+# Apply all migrations (including api)
 docker compose exec backend python manage.py migrate
 
-# 5. Create admin user and profile via a temporary python file
+# 5. Create admin user and profile using a temporary script loaded via shell redirection
 Write-Host "Creating admin user (admin / adminpass)..." -ForegroundColor Yellow
 
-$pythonCode = @"
+$adminScript = @'
 from django.contrib.auth.models import User
 from api.models import UserProfile
 
@@ -33,20 +44,23 @@ if created:
     admin.is_staff = True
     admin.is_superuser = True
     admin.save()
+    print('Admin user created.')
 
 profile, prof_created = UserProfile.objects.get_or_create(user=admin, defaults={'role': 'admin'})
 if not prof_created:
     profile.role = 'admin'
     profile.save()
+    print('Admin profile updated.')
 
-print('Admin user ready')
-"@
+print('Admin user ready.')
+'@
 
-# Save code to a temp file, copy to Docker, run it natively, then delete the temp file
-Set-Content -Path "temp_admin.py" -Value $pythonCode -Encoding ASCII
-docker cp temp_admin.py grit_django_api:/app/
-docker compose exec backend python /app/temp_admin.py
-Remove-Item "temp_admin.py"
+$tempFile = [System.IO.Path]::GetTempFileName()
+Set-Content -Path $tempFile -Value $adminScript -Encoding ASCII
+docker cp $tempFile grit_django_api:/app/temp_admin.py
+# Run the script using Django's shell (so settings are loaded)
+docker compose exec backend bash -c "python manage.py shell < /app/temp_admin.py"
+Remove-Item $tempFile
 
 # 6. Copy the Crossref scraper into the container
 Write-Host "Copying Crossref scraper..." -ForegroundColor Yellow
@@ -61,7 +75,7 @@ Write-Host "Fetching real publications from Crossref API (may take a minute)..."
 docker compose exec backend python /app/scrape_crossref.py
 
 Write-Host ""
-Write-Host "Setup complete!" -ForegroundColor Green
+Write-Host "Setup complete! Refresh your browser." -ForegroundColor Green
 Write-Host "Frontend: http://localhost:5173" -ForegroundColor Green
 Write-Host "Login: admin / adminpass" -ForegroundColor Green
 Write-Host ""
