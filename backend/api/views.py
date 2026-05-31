@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 import cloudinary.uploader
@@ -9,22 +10,29 @@ import traceback
 
 from .models import Publisher, Author, Publication
 from .serializers import PublisherSerializer, AuthorSerializer, PublicationSerializer
-
-# ==============================================================
-# STANDARD CRUD VIEWSETS LAYER (with filtering & ordering)
-# ==============================================================
+from .permissions import IsAdminOrReadOnly
 
 class PublicationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     queryset = Publication.objects.all()
     serializer_class = PublicationSerializer
     lookup_field = 'doi'
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['publication_type', 'publisher__name']
-    search_fields = ['title', 'doi', 'abstract', 'description']
+    search_fields = [
+        'title', 
+        'doi', 
+        'abstract', 
+        'description',
+        'authors__first_name',   # search in author first names
+        'authors__last_name',     # search in author last names
+        'publisher__name'         # search in publisher names
+    ]
     ordering_fields = ['publication_date', 'price', 'title']
     ordering = ['-publication_date']
 
 class AuthorViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -32,12 +40,13 @@ class AuthorViewSet(viewsets.ModelViewSet):
     ordering_fields = ['last_name', 'first_name']
 
 class PublisherViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     queryset = Publisher.objects.all()
     serializer_class = PublisherSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name']
-
+    
 # ==============================================================
 # CUSTOM UTILITY ENDPOINTS LAYER
 # ==============================================================
@@ -58,7 +67,7 @@ def cloudinary_upload_view(request):
             file_to_upload,
             folder=folder_path,
             overwrite=True,
-            resource_type="image"
+            resource_type="auto"
         )
         
         return Response({

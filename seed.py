@@ -6,8 +6,28 @@ from datetime import datetime, timedelta
 
 API_BASE_URL = 'http://localhost:8000/api'
 
+def get_token():
+    """Obtain JWT access token using admin credentials."""
+    auth_url = f"{API_BASE_URL}/token/"
+    response = requests.post(auth_url, json={"username": "admin", "password": "adminpass"})
+    if response.status_code == 200:
+        return response.json().get('access')
+    else:
+        print(f"❌ Failed to obtain token: {response.text}")
+        return None
+
 def seed_database():
     print("🚀 Initializing Relational Data Seeding Matrix...")
+
+    token = get_token()
+    if not token:
+        print("❌ Cannot proceed without authentication token.")
+        return
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
 
     # 1. Generate Core Publishing House Nodes
     publisher_names = [
@@ -21,18 +41,31 @@ def seed_database():
         "Philippine Army Signal Regiment Archives"
     ]
     
+    # Get existing publishers to avoid duplicates
+    existing_pubs = {}
+    resp = requests.get(f"{API_BASE_URL}/publishers/", headers=headers)
+    if resp.status_code == 200:
+        for p in resp.json().get('results', []):
+            existing_pubs[p['name']] = p['id']
+
     publisher_ids = []
     print("🏢 Injecting Publishing Entities...")
     for name in publisher_names:
-        res = requests.post(f"{API_BASE_URL}/publishers/", json={"name": name})
+        if name in existing_pubs:
+            publisher_ids.append(existing_pubs[name])
+            continue
+        res = requests.post(f"{API_BASE_URL}/publishers/", json={"name": name}, headers=headers)
         if res.status_code in [200, 201]:
             publisher_ids.append(res.json()['id'])
-            
+            print(f"   + Created publisher: {name}")
+        else:
+            print(f"   ⚠️ Failed to create publisher {name}: {res.text}")
+
     if not publisher_ids:
         print("❌ Error: Could not populate publishers. Is the backend down?")
         return
 
-    # 2. Generate Core Scholar Nodes (30 Distinct Authors to mix and match)
+    # 2. Generate Core Scholar Nodes (30 Distinct Authors)
     first_names = ["Jemar John", "Jerry", "Maria", "Antonio", "Emmanuel", "Grace", "Sarah", "Juan", "Cris", "Datu"]
     last_names = ["Lumingkit", "Tañajora", "Santos", "Dela Cruz", "Macapaar", "Pangandaman", "Ramos", "Bautista", "Aquino"]
     bionotes = [
@@ -45,16 +78,24 @@ def seed_database():
 
     author_ids = []
     print("✍️ Injecting Core Scholar Profiles...")
-    # Generate 30 distinct random authors to ensure a rich selection pool
     for i in range(30):
+        # For first author, force a known name to appear often
+        fn = random.choice(first_names)
+        ln = random.choice(last_names) if i > 0 else "Lumingkit"
         payload = {
-            "first_name": random.choice(first_names),
-            "last_name": random.choice(last_names) if i > 0 else "Lumingkit", # Guarantee matching primary items
+            "first_name": fn,
+            "last_name": ln,
             "short_bionote": random.choice(bionotes)
         }
-        res = requests.post(f"{API_BASE_URL}/authors/", json=payload)
+        res = requests.post(f"{API_BASE_URL}/authors/", json=payload, headers=headers)
         if res.status_code in [200, 201]:
             author_ids.append(res.json()['id'])
+        else:
+            print(f"   ⚠️ Failed to create author {fn} {ln}: {res.text}")
+
+    if not author_ids:
+        print("❌ No authors created. Aborting.")
+        return
 
     # 3. Generate 200 Multi-Author Publications
     pub_types = ["Book", "Journal Article", "Research Paper", "Report"]
@@ -72,23 +113,18 @@ def seed_database():
     base_date = datetime(2026, 5, 27)
     
     for i in range(1, 201):
-        # Determine unique variations for titles
         topic = random.choice(policy_topics)
         title = f"{topic} - Volume {i} (Draft Revision)"
         
-        # Pick a random date within the last 2 years
         random_days = random.randint(0, 730)
         pub_date = (base_date - timedelta(days=random_days)).strftime("%Y-%m-%d")
         
-        # Pick a random valuation (mix of free and premium models)
         price = "0.00" if random.random() < 0.25 else f"{random.uniform(150.00, 450.00):.2f}"
         
-        # CRITICAL REUSE MATRIX RULE: Pick 1 to 4 authors randomly for this specific paper
-        # Because we pick from the exact same pool of 30 authors 200 times, authors will naturally 
-        # co-author multiple papers together, thoroughly populating your M:N bridge mapping.
         sampled_authors = random.sample(author_ids, k=random.randint(1, 4))
         
         pub_payload = {
+            "doi": f"10.1234/grit.{i:04d}",          # Unique DOI for each publication
             "title": title,
             "publication_type": random.choice(pub_types),
             "publication_date": pub_date,
@@ -96,11 +132,13 @@ def seed_database():
             "description": f"Archival data record node mapping policy metrics for execution string sequence {i}.",
             "abstract": f"This dataset unrolls simulation variations exploring iterative governance impacts regarding {topic.lower()}. Verified under production optimization configurations.",
             "publisher": random.choice(publisher_ids),
-            "authors": sampled_authors # Injects the clean Many-to-Many primary key integer array list
+            "authors": sampled_authors
         }
 
-        res = requests.post(f"{API_BASE_URL}/publications/", json=pub_payload)
-        if i % 25 == 0:
+        res = requests.post(f"{API_BASE_URL}/publications/", json=pub_payload, headers=headers)
+        if res.status_code not in [200, 201]:
+            print(f"   ❌ Failed to create publication #{i}: {res.text}")
+        elif i % 25 == 0:
             print(f"   -> Progress checkpoint: {i}/200 records committed securely.")
 
     print("\n🎉 Database Seeding Operation Complete!")

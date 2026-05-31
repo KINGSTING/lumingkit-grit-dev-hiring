@@ -1,5 +1,22 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.db import models
+from auditlog.registry import auditlog
+from django.contrib.auth.models import User
 
+class UserProfile(models.Model):
+    ROLE_CHOICES = (
+        ('public', 'Public (read-only)'),
+        ('author', 'Scholar/Author'),
+        ('editor', 'Archive Editor'),
+        ('admin', 'Administrator'),
+    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='public')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
+    
 class Author(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -56,3 +73,8 @@ class Publication(models.Model):
 
     def __str__(self):
         return self.title
+
+# after defining Publication, Author, Publisher models
+auditlog.register(Publication)
+auditlog.register(Author)
+auditlog.register(Publisher)

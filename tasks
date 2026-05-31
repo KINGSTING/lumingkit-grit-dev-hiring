@@ -35,17 +35,15 @@ Publisher Detail Modal:
                         [/] Make this journal cover or publishing cover displayed in the detail modal
                         [/] Detail modal Publish Title, Photo (Cover Image), Link, description
                         
-           [] No duplicate of names and title             
+           [/] No duplicate of names and title             
                         
 NEXT FEATURE:
-                [] Digital Asset Storage & Long-Term Preservation
-                        [] Backend Implementation: Extend Publication with an archive_file_url field. Update cloudinary_upload_view to support file uploads by allowing raw document resource types:
-                        [] Data Integrity Checksums: Calculate a SHA-256 fixity hash when a file is uploaded and save it in your database. This ensures the document remains uncorrupted and unaltered over time.
-                [] Persistent Identifiers & Advanced Metadata
-                        [] DOI Field: Add a doi (Digital Object Identifier) field to the Publication model. This allows integration with indexing infrastructure (like Crossref or DataCite) so that your archived documents are permanently discoverable and citable.
-                        [] Dublin Core Mapping: Introduce a property method or serializer output that automatically translates your model fields into standard metadata schemas, ensuring external repository aggregators like Google Scholar can scrape your system.
-                [] Backend Pagination & Server-Side Filtering
-                        [] The Fix: Leverage DRF's native pagination settings (PageNumberPagination) alongside filtering backends (django-filter). Let the MySQL engine execute the queries asynchronously through backend database operations:
+                [/] Digital Asset Storage & Long-Term Preservation
+                        [/] Backend Implementation: Extend Publication with an archive_file_url field. Update cloudinary_upload_view to support file uploads by allowing raw document resource types:
+                      
+                [/] Backend Pagination & Server-Side Filtering
+                        [/] The Fix: Leverage DRF's native pagination settings (PageNumberPagination) alongside filtering backends (django-filter). Let the MySQL engine execute the queries asynchronously through backend database operations: Have user choose how many items per page
+                        
                 [] System Security, RBAC, and Audit Logs
                         [] Authentication & Roles: Implement a robust token architecture (such as Django REST Framework's simple-jwt or built-in TokenAuthentication).
                         [] Role-Based Access Control (RBAC): Set up specific access tiers (e.g., Anonymous Public User = Read-Only; Scholar/Author = Edit Profile; Archive Admin/Editor = Full CRUD).
